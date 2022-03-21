@@ -3,5 +3,5 @@ config~=0.5.1
 Flask~=2.0.2
 bcrypt~=3.2.0
 flask-mysqldb~=0.2.0
-pytz~=2021.3
+pytz~=2022.1
 setuptools~=60.9
