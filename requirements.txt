@@ -1,7 +1,7 @@
 robotframework~=7.0
 config~=0.5.1
 Flask~=3.1.0
-bcrypt~=4.2.0
+bcrypt~=4.2.1
 flask-mysqldb~=2.0.0
 pytz~=2024.2
 setuptools~=75.5.0
