@@ -4,4 +4,4 @@ Flask~=3.1.1
 bcrypt~=4.3.0
 flask-mysqldb~=2.0.0
 pytz~=2025.2
-setuptools~=80.4.0
+setuptools~=80.8.0
