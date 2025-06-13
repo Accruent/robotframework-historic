@@ -1,4 +1,4 @@
-robotframework~=7.2
+robotframework~=7.3
 config~=0.5.1
 Flask~=3.1.1
 bcrypt~=4.3.0
