@@ -171,6 +171,10 @@ def dashboard(db):
         execution_fail_data=execution_fail_data,
         execution_time_data=execution_time_data,db_name=db)
 
+    elif results_data[0][0] > 0:
+        # Execution data exists but no suite/test rows (e.g. roomba-synced project)
+        return redirect(url_for('ehistoric', db=db))
+
     else:
         return redirect(url_for('redirect_url'))
 
