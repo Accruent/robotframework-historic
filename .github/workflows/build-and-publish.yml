@@ -1,0 +1,67 @@
+name: Build and Publish Docker Image
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [closed]
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PROGET_REGISTRY: proget.accruentsystems.com
+  IMAGE_NAME: proget.accruentsystems.com/qe_docker/library/rfhistoric
+
+jobs:
+  build-and-publish:
+    if: >
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    runs-on: ubuntu-latest
+    name: Build and Publish to ProGet
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(python -c "import sys; sys.path.insert(0, '.'); from version import VERSION; print(VERSION)")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "[INFO] Building version: $VERSION"
+
+      - name: Log in to ProGet Docker registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.PROGET_REGISTRY }}
+          username: ${{ secrets.PROGET_USERNAME }}
+          password: ${{ secrets.PROGET_PASSWORD }}
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ${{ env.IMAGE_NAME }}:latest \
+            -t ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }} \
+            .
+          echo "[INFO] Built image: ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}"
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ env.IMAGE_NAME }}:latest
+          docker push ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+          echo "[SUCCESS] Pushed ${{ env.IMAGE_NAME }}:latest and :${{ steps.version.outputs.version }}"
+
+      - name: Summary
+        run: |
+          echo "## Docker Image Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry:** ${{ env.PROGET_REGISTRY }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** ${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:** \`latest\`, \`${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY

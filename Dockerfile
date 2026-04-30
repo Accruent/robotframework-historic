@@ -3,7 +3,11 @@ FROM python:3.9
 # Install any needed packages
 RUN apt-get update \
 &&  rm -rf /var/lib/apt/lists/*
-RUN pip install git+https://github.com/accruent/robotframework-historic
+
+# Copy source and install locally so the build reflects local changes
+COPY . /app
+WORKDIR /app
+RUN pip install .
 
 # Make port 5000 available to the world outside this container
 EXPOSE 5000
