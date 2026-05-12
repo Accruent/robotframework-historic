@@ -202,7 +202,7 @@ Wire `role` into the session at login so all subsequent routes and templates can
 2. Confirm the app loads without errors after login.
 3. In a separate terminal, verify the DB role: `docker exec robotframework-historic-db-1 mysql -uroot -ppassword -e "SELECT name, email, role FROM accounts.TB_USERS WHERE email='admin@local';"`
    - Expected: `role = lead`
-- [ ] Login succeeds, app loads, DB confirms admin@local has role='lead'
+- [x] Login succeeds, app loads, DB confirms admin@local has role='lead'
 
 **Check 2 — Register a new Viewer user**
 1. While logged in as `admin@local`, navigate to [http://localhost:5001/register](http://localhost:5001/register).
@@ -210,7 +210,7 @@ Wire `role` into the session at login so all subsequent routes and templates can
 3. In the Role dropdown, select **Viewer** and submit.
 4. Verify in DB: `docker exec robotframework-historic-db-1 mysql -uroot -ppassword -e "SELECT name, email, role FROM accounts.TB_USERS WHERE email='viewer@local';"`
    - Expected: `role = viewer`
-- [ ] viewer@local appears in TB_USERS with role='viewer'
+- [x] viewer@local appears in TB_USERS with role='viewer'
 
 **Check 3 — Register a new Lead user**
 1. While still logged in, navigate to [http://localhost:5001/register](http://localhost:5001/register).
@@ -218,15 +218,15 @@ Wire `role` into the session at login so all subsequent routes and templates can
 3. In the Role dropdown, select **Lead** and submit.
 4. Verify in DB: `docker exec robotframework-historic-db-1 mysql -uroot -ppassword -e "SELECT name, email, role FROM accounts.TB_USERS WHERE email='lead@local';"`
    - Expected: `role = lead`
-- [ ] lead@local appears in TB_USERS with role='lead'
+- [x] lead@local appears in TB_USERS with role='lead'
 
 **Check 4 — Registration form hidden when logged out**
 1. Log out of the app (navigate to [http://localhost:5001/logout](http://localhost:5001/logout) or use the logout button).
 2. Navigate directly to [http://localhost:5001/register](http://localhost:5001/register).
 3. Confirm the registration form does not appear (page should be blank or show no form — existing behavior).
-- [ ] Registration form not visible when logged out
+- [x] Registration form not visible when logged out
 
-**Pause for human confirmation before proceeding to Phase 3.**
+**Phase 2 confirmed. ✅ Proceeding to Phase 3.**
 
 ---
 
@@ -292,20 +292,20 @@ Add server-side role enforcement to the test run deletion route and convert dele
 1. Log in as `viewer@local` / `viewer123` (created in Phase 2).
 2. Navigate to [http://localhost:5001/rf_full_data/ehistoric](http://localhost:5001/rf_full_data/ehistoric).
 3. Confirm no **Delete** link appears in any row of the execution history table.
-- [ ] Delete link absent from all rows when logged in as Viewer
+- [x] Delete link absent from all rows when logged in as Viewer
 
 **Check 2 — Lead sees delete link**
 1. Log out, then log in as `admin@local` / `admin`.
 2. Navigate to [http://localhost:5001/rf_full_data/ehistoric](http://localhost:5001/rf_full_data/ehistoric).
 3. Confirm a **Delete** link appears on each execution row.
-- [ ] Delete link visible on rows when logged in as Lead
+- [x] Delete link visible on rows when logged in as Lead
 
 **Check 3 — Viewer blocked from direct URL access**
 1. Log out, then log in as `viewer@local` / `viewer123`.
 2. Note an execution ID from the ehistoric page (e.g., `1`).
 3. Navigate directly to [http://localhost:5001/rf_full_data/deleconf/1](http://localhost:5001/rf_full_data/deleconf/1).
 4. Confirm a **403 Forbidden** response (not a redirect to login, not a deletion).
-- [ ] Direct URL to deleconf returns 403 for Viewer
+- [x] Direct URL to deleconf returns 403 for Viewer
 
 **Check 4 — Lead completes a deletion; audit log written**
 1. Log out, then log in as `admin@local` / `admin`.
@@ -314,16 +314,16 @@ Add server-side role enforcement to the test run deletion route and convert dele
 4. Confirm the run no longer appears in the ehistoric list (row count decreased by 1).
 5. Verify audit log: `docker exec robotframework-historic-db-1 mysql -uroot -ppassword -e "SELECT execution_id, deleted_by, deleted_at FROM rf_full_data.TB_DELETION_LOG;"`
    - Expected: one row with `deleted_by = admin@local` and a recent `deleted_at` timestamp.
-- [ ] Deleted run disappears from ehistoric list
-- [ ] TB_DELETION_LOG contains one row with correct deleted_by and timestamp
+- [x] Deleted run disappears from ehistoric list
+- [x] TB_DELETION_LOG contains one row with correct deleted_by and timestamp
 
 **Check 5 — Dashboard metrics still correct after deletion**
 1. Navigate to [http://localhost:5001/rf_full_data/dashboard](http://localhost:5001/rf_full_data/dashboard).
 2. Confirm the page loads without errors.
 3. Confirm the execution count reflects the deletion (one fewer run than before).
-- [ ] Dashboard loads without errors and shows updated counts
+- [x] Dashboard loads without errors and shows updated counts
 
-**Pause for human confirmation before proceeding to Phase 4.**
+**Phase 3 confirmed. ✅ Proceeding to Phase 4.**
 
 ---
 
