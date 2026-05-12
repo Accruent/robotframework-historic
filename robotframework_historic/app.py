@@ -54,6 +54,7 @@ def login():
             if bcrypt.hashpw(password, user["password"].encode('utf-8')) == user["password"].encode('utf-8'):
                 session['name'] = user['name']
                 session['email'] = user['email']
+                session['role'] = user['role']
                 return redirect(url_for('index'))
             else:
                 return redirect("/login" )
@@ -75,11 +76,12 @@ def register():
         name = request.form['name']
         email = request.form['email']
         password = request.form['password'].encode('utf-8')
+        role = request.form.get('role', 'viewer')
         hash_password = bcrypt.hashpw(password, bcrypt.gensalt())
 
         cur = mysql.connection.cursor()
         use_db(cur, "accounts")
-        cur.execute("INSERT INTO TB_USERS (name, email, password) VALUES (%s,%s,%s)",(name,email,hash_password,))
+        cur.execute("INSERT INTO TB_USERS (name, email, password, role) VALUES (%s,%s,%s,%s)",(name,email,hash_password,role,))
         mysql.connection.commit()
         session['name'] = request.form['name']
         session['email'] = request.form['email']
