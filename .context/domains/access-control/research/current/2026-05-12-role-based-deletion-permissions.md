@@ -4,7 +4,7 @@ author: Neil Howell
 domain: access-control
 jira: QE-7360
 scope: "robotframework_historic/app.py, docker/init.sql, robotframework_historic/templates/"
-status: draft
+status: validated
 ---
 
 # Research: Role-Based Access Control Foundations in RFHistoric
@@ -319,18 +319,18 @@ Table: `TB_TEST`
 
 ---
 
-### Open Questions
+### Decisions (Open Questions Resolved)
 
-1. **Project Ownership Model:** Should Lead role be per-project (only leads of project X can delete in project X) or global (all Leads can delete anywhere)?
+1. **Project Ownership Model:** Lead role is **global** — all Lead users can delete test runs in any project, regardless of which project.
 
-2. **Soft-Delete Schema Strategy:** Should `is_deleted` / `deleted_at` / `deleted_by` columns be added to `TB_EXECUTION`, or should a separate audit/tombstone table be created?
+2. **Soft-Delete Schema Strategy:** Use a **separate `TB_DELETION_LOG` table** per project database (not nullable columns on `TB_EXECUTION`). Keeps the core execution table clean and provides a clear, queryable audit trail. Deeper pros/cons research requested before finalizing schema design.
 
-3. **Deleted Runs Tab Scope:** Should deleted runs be visible across all projects on one tab, or per-project only (consistent with current project-scoped views)?
+3. **Deleted Runs Tab Scope:** **Per-project only** — consistent with the existing project-scoped navigation pattern.
 
-4. **Retention Policy:** How long should soft-deleted runs be retained before permanent purge?
+4. **Retention Policy:** **Retain indefinitely.** Deletion log data is inexpensive to store; cleanup can be handled by a future maintenance script if ever needed. Indefinite retention preserves full audit history and enables potential restoration.
 
-5. **Auth Enforcement Layer:** Should route-level protection use a Flask `@login_required`-style decorator, or is session verification inline in each handler sufficient?
+5. **Auth Enforcement Layer:** **Consistent with existing codebase** — inline session checks in route handlers (matching the pattern already used, extended to server-side rather than template-only).
 
-6. **Audit Trail Requirement:** Is a `TB_DELETION_LOG` table (actor, target, timestamp) needed, or is the soft-delete row itself sufficient audit?
+6. **Audit Trail Requirement:** **Separate `TB_DELETION_LOG` table** — same rationale as #2; provides clear, queryable audit without bloating `TB_EXECUTION`. Deeper research requested before finalizing schema design.
 
-7. **Per-Project DB Schema Migration:** For soft-delete, who/what runs `ALTER TABLE TB_EXECUTION ADD COLUMN is_deleted...` against every existing project database?
+7. **Per-Project DB Schema Migration:** **One-time migration script** — run as part of deployment to `CREATE TABLE TB_DELETION_LOG` in every existing project database discovered via `robothistoric.TB_PROJECT`. 
