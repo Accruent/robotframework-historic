@@ -206,12 +206,28 @@ def ehistoric(db):
 
 @app.route('/<db>/deleconf/<eid>', methods=['GET'])
 def delete_eid_conf(db, eid):
+    if session.get('role') != 'lead':
+        return 'Forbidden', 403
     return render_template('deleconf.html', db_name = db, eid = eid)
 
 @app.route('/<db>/edelete/<eid>', methods=['GET'])
 def delete_eid(db, eid):
+    if session.get('role') != 'lead':
+        return 'Forbidden', 403
     cursor = mysql.connection.cursor()
     use_db(cursor, db)
+    # write audit snapshot before deleting
+    cursor.execute(
+        "INSERT INTO TB_DELETION_LOG "
+        "(execution_id, deleted_by, snapshot_execution_date, snapshot_execution_desc, "
+        "snapshot_execution_pass, snapshot_execution_fail, snapshot_execution_total, "
+        "snapshot_execution_time, snapshot_execution_stotal, snapshot_execution_spass, snapshot_execution_sfail) "
+        "SELECT Execution_Id, %s, Execution_Date, Execution_Desc, "
+        "Execution_Pass, Execution_Fail, Execution_Total, "
+        "Execution_Time, Execution_STotal, Execution_SPass, Execution_SFail "
+        "FROM TB_EXECUTION WHERE Execution_Id=%s",
+        (session.get('email'), eid)
+    )
     # remove execution from tables: execution, suite, test
     cursor.execute("DELETE FROM TB_EXECUTION WHERE Execution_Id='%s';" % eid)
     cursor.execute("DELETE FROM TB_SUITE WHERE Execution_Id='%s';" % eid)

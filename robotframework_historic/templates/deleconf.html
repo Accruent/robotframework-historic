@@ -55,8 +55,15 @@
             <div id="db-row" class="row justify-content-center align-items-center">
                 <div id="db-column" class="col-md-6">
                     <div id="db-box" class="col-md-12">
-                        <form id="db-form" class="form" action="" method="post">
-                            <h3 class="text-center text-info">Delete Execution?</h3>
+                        <form id="db-form" class="form" action="" method="post">                            {% if session.get('role') != 'lead' %}
+                            <h3 class="text-center text-danger">Insufficient permissions</h3>
+                            <hr>
+                            <p class="text-muted text-center">You do not have permission to delete test runs.</p>
+                            <hr>
+                            <div class="text-center">
+                                <a href="../ehistoric" type="button" class="btn btn-info">Back</a>
+                            </div>
+                            {% else %}                            <h3 class="text-center text-info">Delete Execution?</h3>
 							<hr>
                             <p class="text-muted">Would you like to delete execution: <b style="color:red">{{eid}}</b> ? You cannot undo this.</p>
 							<hr>
@@ -74,6 +81,7 @@
                                     </td>
                                 </tr>
                             <table>
+                            {% endif %}
                         </form>
                     </div>
                 </div>
