@@ -444,14 +444,122 @@ Each phase has explicit automated and manual success criteria defined above. No 
 
 ## Migration Notes
 
-**One-time migration script** (`scripts/migrate_qe7360.py`) must be run **before** deploying the updated application code. Running order:
+**One-time migration script** (`scripts/migrate_qe7360.py`) must be run **before** deploying the updated application code.
 
-1. Run `scripts/migrate_qe7360.py` against the target MySQL instance
-2. Set existing Lead users' `role` to `'lead'` manually (or update the migration script with known email addresses)
-3. Deploy updated application code
-4. Verify with smoke test: login, confirm role in session, attempt deletion as Lead and Viewer
+### Production Deployment Order
 
-The seed `admin@local` account is automatically set to `role = 'lead'` by the migration script.
+1. **Run migration script** (see QE-7370 for full steps)
+2. **Audit users and assign Lead roles** (see QE-7369)
+3. **Deploy updated application code** (`docker compose pull && docker compose up -d`)
+4. **Smoke test**: log in, confirm role in session, attempt deletion as Lead and as Viewer
+
+### Running the Migration Script
+
+**Option A — Inside the rfhistoric container (recommended if Python/mysqlclient not on host):**
+```
+docker cp scripts/migrate_qe7360.py <rfhistoric-container>:/tmp/migrate_qe7360.py
+docker exec <rfhistoric-container> python /tmp/migrate_qe7360.py \
+  --host <db-host> --port 3306 --user <db-user> --password <db-password>
+```
+
+**Option B — On the host directly (requires Python 3 + mysqlclient):**
+```
+python scripts/migrate_qe7360.py --host <db-host> --port 3306 --user <db-user> --password <db-password>
+```
+
+**Expected output (all lines must appear, no tracebacks):**
+```
+[OK] role column added   (or [SKIP] role column already exists)
+[OK] admin@local set to lead   (or [SKIP] already non-viewer)
+[OK] TB_DELETION_LOG ready — <project1>
+[OK] TB_DELETION_LOG ready — <project2>
+...
+Migration complete.
+```
+
+**Post-migration verification queries:**
+```sql
+SHOW COLUMNS FROM accounts.TB_USERS LIKE 'role';
+SELECT name, email, role FROM accounts.TB_USERS ORDER BY created_at;
+SHOW TABLES IN <project_db> LIKE 'TB_DELETION_LOG';
+```
+
+### Rollback Script
+
+`scripts/rollback_qe7360.py` reverses the migration. Same connection args, same idempotent pattern.
+
+**WARNING:** Drops TB_DELETION_LOG and its audit data permanently. Only run before go-live or to fully revert the feature.
+
+**Same execution options as migration:**
+```
+docker cp scripts/rollback_qe7360.py <rfhistoric-container>:/tmp/rollback_qe7360.py
+docker exec <rfhistoric-container> python /tmp/rollback_qe7360.py \
+  --host <db-host> --port 3306 --user <db-user> --password <db-password>
+```
+
+**Expected output (first run):**
+```
+[OK] Dropped role column from accounts.TB_USERS
+[OK] Dropped TB_DELETION_LOG from project db: <project1>
+[OK] Dropped TB_DELETION_LOG from project db: <project2>
+...
+Rollback complete.
+```
+
+**Expected output (idempotent re-run):**
+```
+[SKIP] role column does not exist on accounts.TB_USERS
+[OK] Dropped TB_DELETION_LOG from project db: <project1>   ← DROP IF EXISTS, always safe
+...
+Rollback complete.
+```
+
+### Rollback Script Verification (dev — 2026-05-12)
+
+All three checks were run against the dev container (`robotframework-historic-rfhistoric-1` / `db:3306`).
+
+**Check 1 — First run drops everything cleanly**
+```
+[OK] Dropped role column from accounts.TB_USERS
+[OK] Dropped TB_DELETION_LOG from project db: rf_full_data
+[OK] Dropped TB_DELETION_LOG from project db: roomba_sync_data
+[OK] Dropped TB_DELETION_LOG from project db: empty_project
+Rollback complete.
+```
+- [x] No errors, no tracebacks
+
+**Check 2 — Idempotent re-run**
+```
+[SKIP] role column does not exist on accounts.TB_USERS
+[OK] Dropped TB_DELETION_LOG from project db: rf_full_data   ← DROP IF EXISTS no-op
+...
+Rollback complete.
+```
+- [x] Step 1 SKIPs, Step 2 completes without error
+
+**Check 3 — Migration round-trip: rollback → re-migrate → verify data**
+
+Re-ran `migrate_qe7360.py` after rollback. Output:
+```
+[OK] Added role column to accounts.TB_USERS
+[OK] Set role='lead' for admin@local
+[OK] TB_DELETION_LOG ready in project db: rf_full_data
+[OK] TB_DELETION_LOG ready in project db: roomba_sync_data
+[OK] TB_DELETION_LOG ready in project db: empty_project
+Migration complete.
+```
+
+Post-restore data verification:
+```
+SELECT COUNT(*) AS execution_rows FROM rf_full_data.TB_EXECUTION  → 2  (1 deleted in Phase 3 testing, expected)
+SELECT COUNT(*) AS user_rows FROM accounts.TB_USERS               → 3  (Admin + 2 test users, unchanged)
+admin@local role                                                   → lead  (restored by migration)
+```
+- [x] Seed data survived rollback + re-migration intact
+- [x] admin@local role correctly restored to 'lead'
+- [x] Non-admin users reset to 'viewer' default (expected — prod role assignments handled by QE-7369)
+
+The script is idempotent — safe to re-run if interrupted.
 
 ---
 
