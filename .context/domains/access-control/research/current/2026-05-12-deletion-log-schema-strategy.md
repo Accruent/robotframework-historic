@@ -5,7 +5,7 @@ domain: access-control
 jira: QE-7360
 parent-research: 2026-05-12-role-based-deletion-permissions.md
 scope: "app.py SQL queries, docker/init.sql TB_EXECUTION DDL, templates/ehistoric.html"
-status: draft
+status: validated
 ---
 
 # Research: TB_DELETION_LOG vs TB_EXECUTION Columns — Schema Strategy
@@ -213,10 +213,18 @@ DELETE FROM TB_EXECUTION WHERE Execution_Id=%s;
 
 ---
 
-### Remaining Open Questions
+### Decisions (Open Questions Resolved)
 
-1. **Dashboard statistics scope:** Should all-time pass/fail aggregates (lines 151, 157–163) include or exclude deleted runs? Option A requires a decision; Option B excludes them automatically.
+1. **Dashboard statistics scope:** Deleted runs are **excluded** from all-time dashboard aggregates. Option B (TB_DELETION_LOG) achieves this automatically — hard-deleted rows disappear from all existing queries with zero changes.
 
-2. **TB_SUITE / TB_TEST fate on deletion:** Under either option, should suite and test detail rows be hard-deleted when a run is deleted, or also archived/logged?
+2. **TB_SUITE / TB_TEST fate on deletion:** **Hard-delete both**, same as current behavior. The deleted-runs tab is a list view only (no drill-down), so suite/test detail rows serve no purpose once a run is deleted. Preserving them as orphans or in archive tables adds complexity for data that is never displayed.
 
-3. **Deleted-runs tab display columns:** Exact column set for the new deleted-runs view — determines which columns to snapshot in Option B log.
+3. **Deleted-runs tab display columns:** All columns from the ehistoric page, plus `Deleted By` and `Deleted At` as the leading identifier columns (positioned after EID to distinguish this view from ehistoric). Full column order:
+   - EID (`execution_id`)
+   - Deleted By (`deleted_by`)
+   - Deleted At (`deleted_at`)
+   - Date (`snapshot_execution_date`)
+   - Description (`snapshot_execution_desc`)
+   - Test Total / Pass / Fail (`snapshot_execution_total/pass/fail`)
+   - Time (m) (`snapshot_execution_time`)
+   - Suite Total / Pass / Fail (`snapshot_execution_stotal/spass/sfail`)
