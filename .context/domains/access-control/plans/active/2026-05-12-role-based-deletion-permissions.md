@@ -125,11 +125,42 @@ Establish the database foundations: add `role` to `TB_USERS`, add `TB_DELETION_L
 - [ ] After migration: `SHOW TABLES IN <project_db> LIKE 'TB_DELETION_LOG'` returns one row per existing project
 
 #### Manual Verification
-- [ ] `docker-compose up` with fresh `init.sql` creates `TB_USERS` with `role` column and seed user with `role = 'lead'`
-- [ ] Migration script run against pre-existing container adds `role` column and `TB_DELETION_LOG` to all projects without dropping existing data
-- [ ] Running migration script a second time produces no errors and reports "already up-to-date"
 
-**Pause for human confirmation before proceeding to Phase 2.**
+**Check 1 — Fresh `init.sql` creates correct schema**
+1. Wipe all volumes and restart: `wsl -d Ubuntu -- bash -c "docker -H unix:///mnt/wsl/shared-docker/docker.sock compose -f /mnt/c/Git/robotframework-historic/docker-compose.yml down -v && docker -H unix:///mnt/wsl/shared-docker/docker.sock compose -f /mnt/c/Git/robotframework-historic/docker-compose.yml up -d"`
+2. Wait ~10 seconds for MySQL init to finish.
+3. Open phpMyAdmin at [http://localhost:8081](http://localhost:8081) — login as `root` / `password`.
+4. Navigate: **accounts** → **TB_USERS** → **Structure** tab.
+   - Confirm `role` column exists with type `varchar(20)`, Not Null, Default `viewer`.
+5. Navigate: **accounts** → **TB_USERS** → **Browse** tab.
+   - Confirm the `Admin` row shows `role = lead`.
+6. Navigate: **rf_full_data** → confirm `TB_DELETION_LOG` table exists in the left sidebar.
+- [x] `role` column visible in TB_USERS structure with DEFAULT 'viewer'
+- [x] Admin row has `role = lead`
+- [x] `TB_DELETION_LOG` table exists in rf_full_data
+
+**Check 2 — Migration against pre-existing container preserves data**
+*(This was run during automated verification. Confirm data was not dropped.)*
+1. Run: `docker exec robotframework-historic-db-1 mysql -uroot -ppassword -e "SELECT COUNT(*) FROM rf_full_data.TB_EXECUTION;"`
+   - Expected: `3` (original seed rows unchanged)
+2. Run: `docker exec robotframework-historic-db-1 mysql -uroot -ppassword -e "SELECT COUNT(*) FROM accounts.TB_USERS;"`
+   - Expected: `1` (Admin row still present, not duplicated)
+- [x] TB_EXECUTION row count unchanged after migration
+- [x] TB_USERS row count unchanged after migration
+
+**Check 3 — Migration script is idempotent**
+1. Re-copy and re-run the migration script:
+   ```
+   wsl -d Ubuntu -- bash -c "docker -H unix:///mnt/wsl/shared-docker/docker.sock cp /mnt/c/Git/robotframework-historic/scripts/migrate_qe7360.py robotframework-historic-rfhistoric-1:/tmp/migrate_qe7360.py && docker -H unix:///mnt/wsl/shared-docker/docker.sock exec robotframework-historic-rfhistoric-1 python /tmp/migrate_qe7360.py --host db --port 3306 --user root --password password"
+   ```
+2. Confirm output shows:
+   - `[SKIP] role column already exists`
+   - `[SKIP] admin@local already has a non-viewer role`
+   - `[OK] TB_DELETION_LOG ready` for each project (CREATE IF NOT EXISTS is a no-op)
+   - `Migration complete.` with no errors or tracebacks
+- [x] All steps SKIP or report already-up-to-date, no errors
+
+**Phase 1 confirmed. ✅ Proceeding to Phase 2.**
 
 ---
 
@@ -164,10 +195,36 @@ Wire `role` into the session at login so all subsequent routes and templates can
 - [ ] New user registered via form is stored with correct role in `TB_USERS`: `SELECT role FROM accounts.TB_USERS WHERE email='<new_email>'`
 
 #### Manual Verification
-- [ ] Log in as `admin@local` — confirm `session['role']` is `'lead'` (can be verified via Flask debug or by observing role-gated UI in Phase 3)
-- [ ] Register a new user as Viewer — confirm they appear in `TB_USERS` with `role = 'viewer'`
-- [ ] Register a new user as Lead — confirm they appear in `TB_USERS` with `role = 'lead'`
-- [ ] Registration form is not accessible when logged out (existing behavior preserved)
+
+**Check 1 — Login populates role in session**
+*(Full UI confirmation of session['role'] requires Phase 3 delete button. Verify indirectly via DB query.)*
+1. Open [http://localhost:5001](http://localhost:5001) and log in as `admin@local` / `admin`.
+2. Confirm the app loads without errors after login.
+3. In a separate terminal, verify the DB role: `docker exec robotframework-historic-db-1 mysql -uroot -ppassword -e "SELECT name, email, role FROM accounts.TB_USERS WHERE email='admin@local';"`
+   - Expected: `role = lead`
+- [ ] Login succeeds, app loads, DB confirms admin@local has role='lead'
+
+**Check 2 — Register a new Viewer user**
+1. While logged in as `admin@local`, navigate to [http://localhost:5001/register](http://localhost:5001/register).
+2. Fill in: name = `Test Viewer`, email = `viewer@local`, password = `viewer123`.
+3. In the Role dropdown, select **Viewer** and submit.
+4. Verify in DB: `docker exec robotframework-historic-db-1 mysql -uroot -ppassword -e "SELECT name, email, role FROM accounts.TB_USERS WHERE email='viewer@local';"`
+   - Expected: `role = viewer`
+- [ ] viewer@local appears in TB_USERS with role='viewer'
+
+**Check 3 — Register a new Lead user**
+1. While still logged in, navigate to [http://localhost:5001/register](http://localhost:5001/register).
+2. Fill in: name = `Test Lead`, email = `lead@local`, password = `lead123`.
+3. In the Role dropdown, select **Lead** and submit.
+4. Verify in DB: `docker exec robotframework-historic-db-1 mysql -uroot -ppassword -e "SELECT name, email, role FROM accounts.TB_USERS WHERE email='lead@local';"`
+   - Expected: `role = lead`
+- [ ] lead@local appears in TB_USERS with role='lead'
+
+**Check 4 — Registration form hidden when logged out**
+1. Log out of the app (navigate to [http://localhost:5001/logout](http://localhost:5001/logout) or use the logout button).
+2. Navigate directly to [http://localhost:5001/register](http://localhost:5001/register).
+3. Confirm the registration form does not appear (page should be blank or show no form — existing behavior).
+- [ ] Registration form not visible when logged out
 
 **Pause for human confirmation before proceeding to Phase 3.**
 
@@ -230,11 +287,41 @@ Add server-side role enforcement to the test run deletion route and convert dele
 - [ ] After Lead deletes a run: `SELECT * FROM TB_DELETION_LOG WHERE execution_id=<eid>` returns one row with correct `deleted_by` and snapshot data
 
 #### Manual Verification
-- [ ] Log in as Viewer — delete link is absent from ehistoric page
-- [ ] Log in as Lead — delete link is present on ehistoric page
-- [ ] Attempt direct URL navigation to `/<db>/deleconf/<eid>` as Viewer — confirm 403
-- [ ] Lead completes a deletion — confirm the run disappears from ehistoric and a log row exists in `TB_DELETION_LOG`
-- [ ] Dashboard metrics update correctly after deletion (no regression in `TB_PROJECT` total count)
+
+**Check 1 — Viewer does not see delete link**
+1. Log in as `viewer@local` / `viewer123` (created in Phase 2).
+2. Navigate to [http://localhost:5001/rf_full_data/ehistoric](http://localhost:5001/rf_full_data/ehistoric).
+3. Confirm no **Delete** link appears in any row of the execution history table.
+- [ ] Delete link absent from all rows when logged in as Viewer
+
+**Check 2 — Lead sees delete link**
+1. Log out, then log in as `admin@local` / `admin`.
+2. Navigate to [http://localhost:5001/rf_full_data/ehistoric](http://localhost:5001/rf_full_data/ehistoric).
+3. Confirm a **Delete** link appears on each execution row.
+- [ ] Delete link visible on rows when logged in as Lead
+
+**Check 3 — Viewer blocked from direct URL access**
+1. Log out, then log in as `viewer@local` / `viewer123`.
+2. Note an execution ID from the ehistoric page (e.g., `1`).
+3. Navigate directly to [http://localhost:5001/rf_full_data/deleconf/1](http://localhost:5001/rf_full_data/deleconf/1).
+4. Confirm a **403 Forbidden** response (not a redirect to login, not a deletion).
+- [ ] Direct URL to deleconf returns 403 for Viewer
+
+**Check 4 — Lead completes a deletion; audit log written**
+1. Log out, then log in as `admin@local` / `admin`.
+2. On [http://localhost:5001/rf_full_data/ehistoric](http://localhost:5001/rf_full_data/ehistoric), note the total number of rows and the EID of the **last** row.
+3. Click **Delete** on that row → confirm on the deleconf page → submit.
+4. Confirm the run no longer appears in the ehistoric list (row count decreased by 1).
+5. Verify audit log: `docker exec robotframework-historic-db-1 mysql -uroot -ppassword -e "SELECT execution_id, deleted_by, deleted_at FROM rf_full_data.TB_DELETION_LOG;"`
+   - Expected: one row with `deleted_by = admin@local` and a recent `deleted_at` timestamp.
+- [ ] Deleted run disappears from ehistoric list
+- [ ] TB_DELETION_LOG contains one row with correct deleted_by and timestamp
+
+**Check 5 — Dashboard metrics still correct after deletion**
+1. Navigate to [http://localhost:5001/rf_full_data/dashboard](http://localhost:5001/rf_full_data/dashboard).
+2. Confirm the page loads without errors.
+3. Confirm the execution count reflects the deletion (one fewer run than before).
+- [ ] Dashboard loads without errors and shows updated counts
 
 **Pause for human confirmation before proceeding to Phase 4.**
 
@@ -295,11 +382,41 @@ Add a new per-project route and template that displays `TB_DELETION_LOG` rows in
 - [ ] Empty project returns page with "No deleted runs" (or equivalent empty state)
 
 #### Manual Verification
-- [ ] Log in as Viewer — "Deleted Runs" navigation link is visible on ehistoric page
-- [ ] Click "Deleted Runs" — page renders correctly with all expected columns
-- [ ] Delete a run as Lead — navigate to Deleted Runs tab — confirm run appears with correct `Deleted By` (email), `Deleted At` timestamp, and snapshot data
-- [ ] Deleted runs are ordered newest-first
-- [ ] Existing ehistoric, dashboard, and metrics pages unaffected
+
+**Check 1 — Deleted Runs link visible to Viewer**
+1. Log in as `viewer@local` / `viewer123`.
+2. Navigate to [http://localhost:5001/rf_full_data/ehistoric](http://localhost:5001/rf_full_data/ehistoric).
+3. Confirm a **Deleted Runs** navigation link is visible (all users, not just Leads).
+- [ ] Deleted Runs link visible when logged in as Viewer
+
+**Check 2 — Deleted Runs page renders with correct columns**
+1. Click the **Deleted Runs** link (or navigate to [http://localhost:5001/rf_full_data/deleted](http://localhost:5001/rf_full_data/deleted)).
+2. Confirm the page loads without errors.
+3. Confirm the table has these column headers in order: **EID**, **Deleted By**, **Deleted At**, **Date**, **Description**, **Test Total**, **Test Pass**, **Test Fail**, **Time (m)**, **Suite Total**, **Suite Pass**, **Suite Fail**.
+4. Confirm the run deleted in Phase 3 Check 4 appears in the table.
+- [ ] Page loads, correct columns present, deleted run visible
+
+**Check 3 — Snapshot data is accurate**
+1. On the Deleted Runs page, find the row for the run deleted in Phase 3.
+2. Confirm:
+   - **Deleted By** = `admin@local`
+   - **Deleted At** = a recent timestamp (today's date)
+   - **Description**, **Test Total/Pass/Fail**, **Time**, **Suite Total/Pass/Fail** match the values that were visible on the ehistoric page before deletion
+- [ ] Snapshot data matches what was in TB_EXECUTION before deletion
+
+**Check 4 — Delete a second run and confirm newest-first ordering**
+1. Log out, log in as `admin@local` / `admin`.
+2. Delete another run from ehistoric (different EID from Phase 3).
+3. Navigate to [http://localhost:5001/rf_full_data/deleted](http://localhost:5001/rf_full_data/deleted).
+4. Confirm the most recently deleted run appears at the **top** of the table.
+- [ ] Deleted runs ordered newest-first
+
+**Check 5 — Regression: other pages unaffected**
+1. Navigate to [http://localhost:5001/rf_full_data/dashboard](http://localhost:5001/rf_full_data/dashboard) — confirm it loads.
+2. Navigate to [http://localhost:5001/rf_full_data/metrics](http://localhost:5001/rf_full_data/metrics) — confirm it loads.
+3. Navigate to [http://localhost:5001/rf_full_data/ehistoric](http://localhost:5001/rf_full_data/ehistoric) — confirm remaining runs still display.
+4. Log out and log back in — confirm login/logout still works.
+- [ ] Dashboard, metrics, ehistoric, login/logout all unaffected
 
 **All phases complete. Ready for PR.**
 
