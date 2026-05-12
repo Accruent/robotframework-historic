@@ -18,12 +18,13 @@ CREATE TABLE IF NOT EXISTS TB_USERS (
     id       INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     name     VARCHAR(255),
     email    VARCHAR(255),
-    password VARCHAR(255)
+    password VARCHAR(255),
+    role     VARCHAR(20) NOT NULL DEFAULT 'viewer'
 );
 
 -- Test login: admin@local / admin
-INSERT INTO TB_USERS (name, email, password)
-VALUES ('Admin', 'admin@local', '$2b$12$/3e9h/RIPYK2xIKOoIVXd.mpHrBT4AsWkv8wJYXTrQWJEu4Ah3v8u');
+INSERT INTO TB_USERS (name, email, password, role)
+VALUES ('Admin', 'admin@local', '$2b$12$/3e9h/RIPYK2xIKOoIVXd.mpHrBT4AsWkv8wJYXTrQWJEu4Ah3v8u', 'lead');
 
 USE robothistoric;
 
@@ -124,6 +125,24 @@ VALUES
     (3, 'Search by name', 'FAIL', 2.9, 'Timeout waiting for results'),
     (3, 'Search by tag',  'PASS', 3.0, '');
 
+CREATE TABLE IF NOT EXISTS TB_DELETION_LOG (
+    log_id                    INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    execution_id              INT NOT NULL,
+    deleted_at                DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_by                VARCHAR(255),
+    snapshot_execution_date   DATETIME,
+    snapshot_execution_desc   TEXT,
+    snapshot_execution_pass   INT,
+    snapshot_execution_fail   INT,
+    snapshot_execution_total  INT,
+    snapshot_execution_time   FLOAT,
+    snapshot_execution_stotal INT,
+    snapshot_execution_spass  INT,
+    snapshot_execution_sfail  INT,
+    INDEX (execution_id),
+    INDEX (deleted_at)
+);
+
 -- ------------------------------------------------------------
 -- Scenario 2: roomba_sync_data - executions only, no suite/test rows
 -- ------------------------------------------------------------
@@ -179,6 +198,24 @@ VALUES
     (NOW() - INTERVAL 1 DAY, 'Roomba sync run 1', 0, 0, 0, 0.0, 0, 0, 0, 0, 0),
     (NOW(),                  'Roomba sync run 2', 0, 0, 0, 0.0, 0, 0, 0, 0, 0);
 
+CREATE TABLE IF NOT EXISTS TB_DELETION_LOG (
+    log_id                    INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    execution_id              INT NOT NULL,
+    deleted_at                DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_by                VARCHAR(255),
+    snapshot_execution_date   DATETIME,
+    snapshot_execution_desc   TEXT,
+    snapshot_execution_pass   INT,
+    snapshot_execution_fail   INT,
+    snapshot_execution_total  INT,
+    snapshot_execution_time   FLOAT,
+    snapshot_execution_stotal INT,
+    snapshot_execution_spass  INT,
+    snapshot_execution_sfail  INT,
+    INDEX (execution_id),
+    INDEX (deleted_at)
+);
+
 -- ------------------------------------------------------------
 -- Scenario 3: empty_project - no data at all (tables exist but are empty)
 -- ------------------------------------------------------------
@@ -226,5 +263,23 @@ CREATE TABLE IF NOT EXISTS TB_TEST (
     Test_Issue_Type  TEXT,
     Test_Tag         TEXT,
     Test_Updated     TEXT
+);
+
+CREATE TABLE IF NOT EXISTS TB_DELETION_LOG (
+    log_id                    INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    execution_id              INT NOT NULL,
+    deleted_at                DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_by                VARCHAR(255),
+    snapshot_execution_date   DATETIME,
+    snapshot_execution_desc   TEXT,
+    snapshot_execution_pass   INT,
+    snapshot_execution_fail   INT,
+    snapshot_execution_total  INT,
+    snapshot_execution_time   FLOAT,
+    snapshot_execution_stotal INT,
+    snapshot_execution_spass  INT,
+    snapshot_execution_sfail  INT,
+    INDEX (execution_id),
+    INDEX (deleted_at)
 );
 -- No rows inserted - empty tables

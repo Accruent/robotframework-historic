@@ -119,6 +119,21 @@ def add_db():
                            "Test_Comment TEXT, Test_Assigned_To TEXT, Test_ETA TEXT, "
                            "Test_Review_By TEXT, Test_Issue_Type TEXT, Test_Tag TEXT, "
                            "Test_Updated TEXT);")
+            cursor.execute("Create table TB_DELETION_LOG ( log_id INT NOT NULL "
+                           "auto_increment primary key, execution_id INT NOT NULL, "
+                           "deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
+                           "deleted_by VARCHAR(255), "
+                           "snapshot_execution_date DATETIME, "
+                           "snapshot_execution_desc TEXT, "
+                           "snapshot_execution_pass INT, "
+                           "snapshot_execution_fail INT, "
+                           "snapshot_execution_total INT, "
+                           "snapshot_execution_time FLOAT, "
+                           "snapshot_execution_stotal INT, "
+                           "snapshot_execution_spass INT, "
+                           "snapshot_execution_sfail INT, "
+                           "INDEX (execution_id), "
+                           "INDEX (deleted_at));")
             mysql.connection.commit()
         except Exception as e:
             print(str(e))
