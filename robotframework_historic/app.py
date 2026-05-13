@@ -27,10 +27,14 @@ def redirect_url():
 
 @app.route('/<db>/deldbconf', methods=['GET'])
 def delete_db_conf(db):
+    if session.get('role') != 'lead':
+        return 'Forbidden', 403
     return render_template('deldbconf.html', db_name = db)
 
 @app.route('/<db>/delete', methods=['GET'])
 def delete_db(db):
+    if session.get('role') != 'lead':
+        return 'Forbidden', 403
     cursor = mysql.connection.cursor()
     cursor.execute("DROP DATABASE %s;" % db)
     # use_db(cursor, "robothistoric")
@@ -54,6 +58,7 @@ def login():
             if bcrypt.hashpw(password, user["password"].encode('utf-8')) == user["password"].encode('utf-8'):
                 session['name'] = user['name']
                 session['email'] = user['email']
+                session['role'] = user['role']
                 return redirect(url_for('index'))
             else:
                 return redirect("/login" )
@@ -75,11 +80,12 @@ def register():
         name = request.form['name']
         email = request.form['email']
         password = request.form['password'].encode('utf-8')
+        role = request.form.get('role', 'viewer')
         hash_password = bcrypt.hashpw(password, bcrypt.gensalt())
 
         cur = mysql.connection.cursor()
         use_db(cur, "accounts")
-        cur.execute("INSERT INTO TB_USERS (name, email, password) VALUES (%s,%s,%s)",(name,email,hash_password,))
+        cur.execute("INSERT INTO TB_USERS (name, email, password, role) VALUES (%s,%s,%s,%s)",(name,email,hash_password,role,))
         mysql.connection.commit()
         session['name'] = request.form['name']
         session['email'] = request.form['email']
@@ -119,6 +125,21 @@ def add_db():
                            "Test_Comment TEXT, Test_Assigned_To TEXT, Test_ETA TEXT, "
                            "Test_Review_By TEXT, Test_Issue_Type TEXT, Test_Tag TEXT, "
                            "Test_Updated TEXT);")
+            cursor.execute("Create table TB_DELETION_LOG ( log_id INT NOT NULL "
+                           "auto_increment primary key, execution_id INT NOT NULL, "
+                           "deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
+                           "deleted_by VARCHAR(255), "
+                           "snapshot_execution_date DATETIME, "
+                           "snapshot_execution_desc TEXT, "
+                           "snapshot_execution_pass INT, "
+                           "snapshot_execution_fail INT, "
+                           "snapshot_execution_total INT, "
+                           "snapshot_execution_time FLOAT, "
+                           "snapshot_execution_stotal INT, "
+                           "snapshot_execution_spass INT, "
+                           "snapshot_execution_sfail INT, "
+                           "INDEX (execution_id), "
+                           "INDEX (deleted_at));")
             mysql.connection.commit()
         except Exception as e:
             print(str(e))
@@ -187,14 +208,45 @@ def ehistoric(db):
     data = convert_utc_to_cst(data)
     return render_template('ehistoric.html', data=data, db_name=db)
 
+@app.route('/<db>/deleted', methods=['GET'])
+def deleted_runs(db):
+    cursor = mysql.connection.cursor()
+    use_db(cursor, db)
+    cursor.execute(
+        "SELECT execution_id, deleted_by, deleted_at, "
+        "snapshot_execution_date, snapshot_execution_desc, "
+        "snapshot_execution_total, snapshot_execution_pass, snapshot_execution_fail, "
+        "snapshot_execution_time, snapshot_execution_stotal, "
+        "snapshot_execution_spass, snapshot_execution_sfail "
+        "FROM TB_DELETION_LOG ORDER BY deleted_at DESC"
+    )
+    data = cursor.fetchall()
+    return render_template('deletedhistoric.html', data=data, db_name=db)
+
 @app.route('/<db>/deleconf/<eid>', methods=['GET'])
 def delete_eid_conf(db, eid):
+    if session.get('role') != 'lead':
+        return 'Forbidden', 403
     return render_template('deleconf.html', db_name = db, eid = eid)
 
 @app.route('/<db>/edelete/<eid>', methods=['GET'])
 def delete_eid(db, eid):
+    if session.get('role') != 'lead':
+        return 'Forbidden', 403
     cursor = mysql.connection.cursor()
     use_db(cursor, db)
+    # write audit snapshot before deleting
+    cursor.execute(
+        "INSERT INTO TB_DELETION_LOG "
+        "(execution_id, deleted_by, snapshot_execution_date, snapshot_execution_desc, "
+        "snapshot_execution_pass, snapshot_execution_fail, snapshot_execution_total, "
+        "snapshot_execution_time, snapshot_execution_stotal, snapshot_execution_spass, snapshot_execution_sfail) "
+        "SELECT Execution_Id, %s, Execution_Date, Execution_Desc, "
+        "Execution_Pass, Execution_Fail, Execution_Total, "
+        "Execution_Time, Execution_STotal, Execution_SPass, Execution_SFail "
+        "FROM TB_EXECUTION WHERE Execution_Id=%s",
+        (session.get('email'), eid)
+    )
     # remove execution from tables: execution, suite, test
     cursor.execute("DELETE FROM TB_EXECUTION WHERE Execution_Id='%s';" % eid)
     cursor.execute("DELETE FROM TB_SUITE WHERE Execution_Id='%s';" % eid)

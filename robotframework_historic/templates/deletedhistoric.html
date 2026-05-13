@@ -3,7 +3,7 @@
 
 <head>
     <link href="https://img.icons8.com/cotton/64/000000/time-machine.png" rel="shortcut icon" type="image/x-icon"/>
-    <title>RF Historic - History</title>
+    <title>RF Historic - Deleted Runs</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
@@ -12,7 +12,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
-      <!-- Bootstrap core Datatable-->
     <script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js" type="text/javascript"></script>
     <script src="https://cdn.datatables.net/buttons/1.5.2/js/dataTables.buttons.min.js" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js" type="text/javascript"></script>
@@ -26,13 +25,12 @@
         .dt-buttons {
             margin-left: 5px;
         }
-
         .tablinks .active {
             background-color: #666;
             color: white;
         }
-        th, td{
-            text-align:center;
+        th, td {
+            text-align: center;
         }
     </style>
 </head>
@@ -42,7 +40,7 @@
         window.onload = function(){
             executeDataTable();
         };
-   </script>
+    </script>
     <nav class="navbar navbar-inverse navbar-fixed-top">
         <div class="container-fluid">
             <div class="navbar-header">
@@ -56,14 +54,14 @@
             <div class="collapse navbar-collapse" id="myNavbar">
                 <ul class="nav navbar-nav">
                     <li class="tablinks"><a href="./dashboard"><i class="fa fa-dashboard"></i> Dashboard</a></li>
-                    <li class="tablinks active" onclick="executeDataTable()"><a href="./ehistoric"><i class="fa fa-history"></i> History</a></li>
+                    <li class="tablinks"><a href="./ehistoric"><i class="fa fa-history"></i> History</a></li>
                     <li class="tablinks"><a href="./tmetrics"><i class="fa fa-flask"></i> Metrics</a></li>
                     <li class="tablinks"><a href="./flaky"><i class="fa fa-bolt"></i> Flaky</a></li>
                     <li class="tablinks"><a href="./search"><i class="fa fa-search"></i> Search</a></li>
                     <li class="tablinks"><a href="./compare"><i class="fa fa-sliders"></i> Compare</a></li>
-                    <li class="tablinks"><a href="./deleted"><i class="fa fa-trash"></i> Deleted Runs</a></li>
-                    <li class="tablinks" onclick="executeDataTable()"><a href="https://owaspzaphistoric-qe-tools.accruentsystems.com/" target="_blank"><i class="fa fa-bug"></i> OWASP ZAP Historic</a></li>
-                    <li class="tablinks" onclick="executeDataTable()"><a href="https://dashboard-qe-tools.accruentsystems.com/" target="_blank"><i class="fa fa-asterisk"></i> QE Dashboard</a></li>
+                    <li class="tablinks active"><a href="./deleted"><i class="fa fa-trash"></i> Deleted Runs</a></li>
+                    <li class="tablinks"><a href="https://owaspzaphistoric-qe-tools.accruentsystems.com/" target="_blank"><i class="fa fa-bug"></i> OWASP ZAP Historic</a></li>
+                    <li class="tablinks"><a href="https://dashboard-qe-tools.accruentsystems.com/" target="_blank"><i class="fa fa-asterisk"></i> QE Dashboard</a></li>
                 </ul>
             </div>
         </div>
@@ -71,13 +69,16 @@
 
     <div class="tabcontent">
         <div class="d-flex flex-column flex-md-row align-items-center p-1 mb-3 bg-light border-bottom shadow-sm">
-            <h3 class="my-0 mr-md-auto font-weight-normal" >{{db_name}} - Recent Executions</h3>
+            <h3 class="my-0 mr-md-auto font-weight-normal">{{db_name}} - Deleted Runs</h3>
         </div>
         <hr>
-        <table class="table table-striped" id="ehist">
+        {% if data %}
+        <table class="table table-striped" id="delhist">
             <thead>
                 <tr>
                     <th>EID</th>
+                    <th>Deleted By</th>
+                    <th>Deleted At</th>
                     <th>Date</th>
                     <th>Description</th>
                     <th>Test Total</th>
@@ -87,94 +88,68 @@
                     <th>Suite Total</th>
                     <th>Suite Pass</th>
                     <th>Suite Fail</th>
-                    <th>Metrics | Failures | Delete</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in data %}
                     <tr>
-                        <td title="Click to view {{item[0]}} execution info"><a href="./tmetrics/{{item[0]}}" target="_blank">{{item[0]}}</a></td>
-                        <td> {{item[1].strftime('%b %d %Y %I:%M %p %Z')}}</td>
-                        <td style="word-wrap: break-word;max-width: 250px; white-space: normal; text-align: left;"> {{item[2]}}</td>
-                        <td style="color: brown"> {{item[3]}}</td>
-                        <td style="color: green"> {{item[4]}}</td>
-                        <td style="color: red"> {{item[5]}}</td>
-                        <td>{{item[6]}}</td>
-                        <td style="color: brown"> {{item[7]}}</td>
-                        <td style="color: green"> {{item[8]}}</td>
-                        <td style="color: red"> {{item[9]}}</td>
-                        <td> <a href="./metrics/{{item[0]}}" target="_blank">View</a> | <a href="./failures/{{item[0]}}" target="_blank">Failures</a> {% if session.get('role') == 'lead' %} | <a href="./deleconf/{{item[0]}}">Delete</a>{% endif %}</td>
+                        <td>{{item[0]}}</td>
+                        <td>{{item[1]}}</td>
+                        <td>{{item[2]}}</td>
+                        <td>{{item[3]}}</td>
+                        <td style="word-wrap: break-word; max-width: 250px; white-space: normal; text-align: left;">{{item[4]}}</td>
+                        <td style="color: brown">{{item[5]}}</td>
+                        <td style="color: green">{{item[6]}}</td>
+                        <td style="color: red">{{item[7]}}</td>
+                        <td>{{item[8]}}</td>
+                        <td style="color: brown">{{item[9]}}</td>
+                        <td style="color: green">{{item[10]}}</td>
+                        <td style="color: red">{{item[11]}}</td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
+        {% else %}
+        <p class="text-muted">No deleted runs for this project.</p>
+        {% endif %}
     </div>
     <script>
         function executeDataTable() {
-            var fileTitle = "ExecutionHistoric";
-            $('#ehist').DataTable(
+            var fileTitle = "DeletedRunsHistoric";
+            {% if data %}
+            $('#delhist').DataTable(
                 {
                     retrieve: true,
-                    "order": [[ 0, "desc" ]],
+                    "order": [[ 2, "desc" ]],
                     dom: 'l<".margin" B>frtip',
                     buttons: [
-                         {
-							extend:    'copyHtml5',
-							text:      '<i class="fa fa-files-o"></i>',
-							titleAttr: 'Copy',
-							exportOptions: {
-								columns: ':visible:not(:last-child)'
-							}
-						},
+                        {
+                            extend:    'copyHtml5',
+                            text:      '<i class="fa fa-files-o"></i>',
+                            titleAttr: 'Copy',
+                        },
                         {
                             extend:    'csvHtml5',
-							text:      '<i class="fa fa-file-text-o"></i>',
-							titleAttr: 'CSV',
-                            filename: function() {
-                                return fileTitle + '-' + new Date().toLocaleString();
-                            },
-							exportOptions: {
-								columns: ':visible:not(:last-child)'
-							}
+                            text:      '<i class="fa fa-file-text-o"></i>',
+                            titleAttr: 'CSV',
+                            title:     fileTitle
                         },
                         {
-                            extend:    'excelHtml5',
-							text:      '<i class="fa fa-file-excel-o"></i>',
-							titleAttr: 'Excel',
-                            filename: function() {
-                                return fileTitle + '-' + new Date().toLocaleString();
-                            },
-							exportOptions: {
-								columns: ':visible:not(:last-child)'
-							}
+                            extend:    'print',
+                            text:      '<i class="fa fa-print"></i>',
+                            titleAttr: 'Print',
+                            title:     fileTitle
                         },
                         {
-							extend:    'print',
-							text:      '<i class="fa fa-print"></i>',
-							titleAttr: 'Print',
-							exportOptions: {
-								columns: ':visible:not(:last-child)',
-                                alignment: 'left',
-							}
-                        },
-						{
-							extend:    'colvis',
-							collectionLayout: 'fixed two-column',
-							text:      '<i class="fa fa-low-vision"></i>',
-							titleAttr: 'Hide Column',
-							exportOptions: {
-								columns: ':visible:not(:last-child)'
-							},
-							postfixButtons: [ 'colvisRestore' ]
-                        },
-                    ],
-					columnDefs: [ {
-						visible: false,
-					} ]
-			   }
+                            extend:    'colvis',
+                            text:      '<i class="fa fa-low-vision"></i>',
+                            titleAttr: 'Column Visibility'
+                        }
+                    ]
+                }
             );
+            {% endif %}
         }
     </script>
 </body>
-
 </html>
