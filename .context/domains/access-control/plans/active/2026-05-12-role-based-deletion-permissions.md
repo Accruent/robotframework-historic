@@ -430,17 +430,17 @@ Add a new per-project route and template that displays `TB_DELETION_LOG` rows in
 Each phase has explicit automated and manual success criteria defined above. No phase proceeds until its criteria are met and human-confirmed.
 
 ### Regression Checks (after Phase 4)
-- [ ] Login / logout flow unchanged
-- [ ] New user registration works end-to-end
-- [ ] New project creation succeeds and includes `TB_DELETION_LOG`
-- [ ] Dashboard metrics (pass %, total count) correct after test run deletion
-- [ ] Ehistoric page loads correctly with LIMIT 500
+- [x] Login / logout flow unchanged
+- [x] New user registration works end-to-date
+- [x] New project creation succeeds and includes `TB_DELETION_LOG`
+- [x] Dashboard metrics (pass %, total count) correct after test run deletion
+- [x] Ehistoric page loads correctly with LIMIT 500
 
 ### Edge Cases
-- Project database with zero executions — Deleted Runs tab shows empty state
-- Lead user session expires mid-deletion — 403 returned cleanly
-- Migration script run against a project DB that already has `TB_DELETION_LOG` — no error, reports already-up-to-date
-- Viewer attempts direct URL deletion — 403 returned (not a redirect to login)
+- [x] Project database with zero executions — Deleted Runs tab shows empty state
+- [x] Lead user session expires mid-deletion — 403 returned cleanly
+- [x] Migration script run against a project DB that already has `TB_DELETION_LOG` — no error, reports already-up-to-date
+- [x] Viewer attempts direct URL deletion — 403 returned (not a redirect to login)
 
 ---
 
