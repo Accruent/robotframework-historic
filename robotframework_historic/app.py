@@ -27,10 +27,14 @@ def redirect_url():
 
 @app.route('/<db>/deldbconf', methods=['GET'])
 def delete_db_conf(db):
+    if session.get('role') != 'lead':
+        return 'Forbidden', 403
     return render_template('deldbconf.html', db_name = db)
 
 @app.route('/<db>/delete', methods=['GET'])
 def delete_db(db):
+    if session.get('role') != 'lead':
+        return 'Forbidden', 403
     cursor = mysql.connection.cursor()
     cursor.execute("DROP DATABASE %s;" % db)
     # use_db(cursor, "robothistoric")
@@ -203,6 +207,21 @@ def ehistoric(db):
     data = cursor.fetchall()
     data = convert_utc_to_cst(data)
     return render_template('ehistoric.html', data=data, db_name=db)
+
+@app.route('/<db>/deleted', methods=['GET'])
+def deleted_runs(db):
+    cursor = mysql.connection.cursor()
+    use_db(cursor, db)
+    cursor.execute(
+        "SELECT execution_id, deleted_by, deleted_at, "
+        "snapshot_execution_date, snapshot_execution_desc, "
+        "snapshot_execution_total, snapshot_execution_pass, snapshot_execution_fail, "
+        "snapshot_execution_time, snapshot_execution_stotal, "
+        "snapshot_execution_spass, snapshot_execution_sfail "
+        "FROM TB_DELETION_LOG ORDER BY deleted_at DESC"
+    )
+    data = cursor.fetchall()
+    return render_template('deletedhistoric.html', data=data, db_name=db)
 
 @app.route('/<db>/deleconf/<eid>', methods=['GET'])
 def delete_eid_conf(db, eid):

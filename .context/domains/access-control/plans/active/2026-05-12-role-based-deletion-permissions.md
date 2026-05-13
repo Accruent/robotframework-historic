@@ -46,7 +46,7 @@ Add a global Lead role to RFHistoric that gates test run deletion. Non-Lead user
 
 ## What We're NOT Doing
 
-- **Not** adding role protection to project/database deletion (`/<db>/delete`) — ticket explicitly scopes to test run deletion only
+- **Not** adding role protection to project/database deletion (`/<db>/delete`) — ticket explicitly scopes to test run deletion only *(Revised: project deletion was also gated to Lead during Phase 4 when it was discovered that introducing the Viewer role exposed the project Delete button to a user class that never previously existed — effectively a regression)*
 - **Not** implementing Flask-Login or a `@login_required` decorator — inline session checks consistent with existing codebase pattern
 - **Not** adding soft-delete columns to `TB_EXECUTION` — `TB_DELETION_LOG` approach chosen (see schema strategy research)
 - **Not** modifying dashboard statistics — deleted runs excluded from aggregates automatically (hard-delete preserved)
@@ -387,14 +387,14 @@ Add a new per-project route and template that displays `TB_DELETION_LOG` rows in
 1. Log in as `viewer@local` / `viewer123`.
 2. Navigate to [http://localhost:5001/rf_full_data/ehistoric](http://localhost:5001/rf_full_data/ehistoric).
 3. Confirm a **Deleted Runs** navigation link is visible (all users, not just Leads).
-- [ ] Deleted Runs link visible when logged in as Viewer
+- [x] Deleted Runs link visible when logged in as Viewer
 
 **Check 2 — Deleted Runs page renders with correct columns**
 1. Click the **Deleted Runs** link (or navigate to [http://localhost:5001/rf_full_data/deleted](http://localhost:5001/rf_full_data/deleted)).
 2. Confirm the page loads without errors.
 3. Confirm the table has these column headers in order: **EID**, **Deleted By**, **Deleted At**, **Date**, **Description**, **Test Total**, **Test Pass**, **Test Fail**, **Time (m)**, **Suite Total**, **Suite Pass**, **Suite Fail**.
 4. Confirm the run deleted in Phase 3 Check 4 appears in the table.
-- [ ] Page loads, correct columns present, deleted run visible
+- [x] Page loads, correct columns present, deleted run visible
 
 **Check 3 — Snapshot data is accurate**
 1. On the Deleted Runs page, find the row for the run deleted in Phase 3.
@@ -402,23 +402,25 @@ Add a new per-project route and template that displays `TB_DELETION_LOG` rows in
    - **Deleted By** = `admin@local`
    - **Deleted At** = a recent timestamp (today's date)
    - **Description**, **Test Total/Pass/Fail**, **Time**, **Suite Total/Pass/Fail** match the values that were visible on the ehistoric page before deletion
-- [ ] Snapshot data matches what was in TB_EXECUTION before deletion
+- [x] Snapshot data matches what was in TB_EXECUTION before deletion
 
 **Check 4 — Delete a second run and confirm newest-first ordering**
 1. Log out, log in as `admin@local` / `admin`.
 2. Delete another run from ehistoric (different EID from Phase 3).
 3. Navigate to [http://localhost:5001/rf_full_data/deleted](http://localhost:5001/rf_full_data/deleted).
 4. Confirm the most recently deleted run appears at the **top** of the table.
-- [ ] Deleted runs ordered newest-first
+- [x] Deleted runs ordered newest-first
 
 **Check 5 — Regression: other pages unaffected**
 1. Navigate to [http://localhost:5001/rf_full_data/dashboard](http://localhost:5001/rf_full_data/dashboard) — confirm it loads.
 2. Navigate to [http://localhost:5001/rf_full_data/metrics](http://localhost:5001/rf_full_data/metrics) — confirm it loads.
 3. Navigate to [http://localhost:5001/rf_full_data/ehistoric](http://localhost:5001/rf_full_data/ehistoric) — confirm remaining runs still display.
 4. Log out and log back in — confirm login/logout still works.
-- [ ] Dashboard, metrics, ehistoric, login/logout all unaffected
+- [x] Dashboard, metrics, ehistoric, login/logout all unaffected
 
-**All phases complete. Ready for PR.**
+**Phase 4 confirmed. ✅ All phases complete. Ready for PR.**
+
+*Note: During Phase 4 verification it was discovered that the Deleted Runs nav tab was missing from Dashboard, Flaky, Search, Tmetrics, and Compare templates (only ehistoric.html had been updated). All five templates were corrected as part of Phase 4. Additionally, project deletion routes and the index.html Delete button were gated to Lead role to close a regression introduced by the new Viewer role.*
 
 ---
 
