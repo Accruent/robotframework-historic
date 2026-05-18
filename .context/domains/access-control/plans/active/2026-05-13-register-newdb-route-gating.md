@@ -204,6 +204,25 @@ Aligns with QE-7360 template style (`session.get()` safe access, explicit role c
 
 ---
 
+## Deployment
+
+No schema changes — no migration script required.
+
+### Steps
+1. Push feature branch to origin (complete)
+2. Raise PR against `master` on GitHub
+3. PR review and approval
+4. Merge PR into `master`
+5. Jenkins auto-triggers on merge: builds Docker image tagged `proget.accruentsystems.com/qe_docker/rfhistoric`, pushes `{BUILD_NUMBER}` and `latest` tags to ProGet
+6. Deploying host pulls new `latest` image and restarts the container
+
+### Post-Deployment Smoke Check
+- Unauthenticated: `GET /register` and `GET /newdb` return 403
+- Lead: `/register` and `/newdb` render forms normally
+- Nav bar: "New User" and "New Project" buttons visible only when logged in as Lead
+
+---
+
 ## References
 - Research: `.context/domains/access-control/research/current/2026-05-13-register-newdb-route-gating.md`
 - QE-7360 guard precedents: `robotframework_historic/app.py:24`, `app.py:29`
