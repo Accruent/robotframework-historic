@@ -54,7 +54,7 @@
 </head>
 <body>
     <body>
-    {% if session['name'] %}
+    {% if session.get('role') == 'lead' %}
     <div id="db">
         <div class="container">
             <div id="db-row" class="row justify-content-center align-items-center">
