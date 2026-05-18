@@ -4,9 +4,10 @@ author: Neil Howell
 domain: access-control
 jira: QE-7360
 research: >
-  .context/domains/access-control/research/current/2026-05-12-role-based-deletion-permissions.md
-  .context/domains/access-control/research/current/2026-05-12-deletion-log-schema-strategy.md
-status: active
+  .context/domains/access-control/research/archive/2026-05-12-role-based-deletion-permissions.md
+  .context/domains/access-control/research/archive/2026-05-12-deletion-log-schema-strategy.md
+status: complete
+completed: 2026-05-13
 phases: 4
 ---
 
@@ -448,12 +449,83 @@ Each phase has explicit automated and manual success criteria defined above. No 
 
 **One-time migration script** (`scripts/migrate_qe7360.py`) must be run **before** deploying the updated application code.
 
+### Production Go-Live Checklist
+
+> **Can be done before PR merge:** Steps 1–3 are safe to run against the live prod DB while the old code is still deployed. The new columns and tables are invisible to the current app.
+
+| # | Step | Owner | Status | Notes |
+|---|---|---|---|---|
+| 1 | Back up the production MySQL database | Neil | [x] | Saved to laptop 2026-05-13 |
+| 2 | Run `migrate_qe7360.py` on prod (QE-7370) | Neil | [x] | Ran 2026-05-13 via kubectl exec — all [OK] |
+| 3 | Verify migration output and post-migration queries | Neil | [x] | role col added, 82 project DBs all [OK], exit 0 |
+| 4 | Assign Lead roles to approved user list (QE-7369) | Neil | [x] | Done 2026-05-13 via phpMyAdmin |
+| 5 | Wait for PR #152 to be approved and merged | Neil | [x] | Merged 2026-05-13 |
+| 6 | Confirm GitHub Actions build succeeded | Neil | [x] | Build 25818792577 succeeded 2026-05-13 |
+| 7 | Deploy updated image to prod (QE-7370 step 6) | Neil | [x] | Rolled out 2026-05-13 — successfully rolled out |
+| 8 | Smoke test on prod | Neil | [x] | Passed 2026-05-13 — deletion, audit log, 403 all verified |
+| 9 | Close QE-7369, QE-7370, QE-7360 | Neil | [x] | Done 2026-05-13 |
+
+### Follow-On Issues Identified During Smoke Test
+
+Logged as **QE-7371** — RFHistoric: Gate register and new-project routes to Lead role only.
+
+| # | Issue | Ticket |
+|---|---|---|
+| 1 | Viewer role can see and access "New Project" on the home page — should be Lead only | QE-7371 |
+| 2 | Viewer role can see and access "Register New User" — should be Lead only | QE-7371 |
+| 3 | Unauthenticated users can access "New Project" — should require login (fix alongside #1) | QE-7371 |
+
+### Database Backup (before migration)
+
+**Method used:** phpMyAdmin full-server export (no `mysqldump` binary available in any pod).
+
+**Backup procedure:**
+1. Navigate to `https://historic-phpmyadmin-qe-tools.accruentsystems.com` and log in
+2. Click the server name at the top of the left sidebar (not a specific database) → **Export** tab
+3. Export method: **Custom**
+4. Format: **SQL**
+5. Databases: **Select all**
+6. Output: **Save output to a file**, compression: None
+7. Format-specific options: enable **Enclose export in a transaction**, leave others as default
+8. Object creation options: enable **Add `DROP TABLE / VIEW / PROCEDURE / FUNCTION / EVENT / TRIGGER` statement** and **`IF NOT EXISTS`**
+9. Data creation options: **both of the above** (column names + multiple rows), **Dump TIMESTAMP columns in UTC** on
+10. Click **Export** — file downloads to local machine as `azure-rfhistoric-mysql.accruentsystems.com.sql`
+
+**Store the backup file** in a safe location (local machine, OneDrive, or shared drive) before running the migration.
+
+### Restore Instructions (if needed)
+
+If the migration causes problems and you need to restore:
+
+1. Navigate to phpMyAdmin → **Import** tab (server-level, not a specific database)
+2. Click **Choose File** and select the `.sql` backup file
+3. Format: **SQL**
+4. Click **Go**
+
+> **Note:** The backup includes `DROP TABLE IF EXISTS` statements, so importing will overwrite existing tables with the backup state. This is a full restore — it will revert all databases to the state at backup time. Only do this if migration has caused data corruption.
+
+If the file is too large for phpMyAdmin's import limit, use the `mysql` CLI from a temporary pod:
+```bash
+kubectl run mysql-restore-tmp -n legion-historic --image=mysql:5.7 --restart=Never \
+  --env="MYSQL_ALLOW_EMPTY_PASSWORD=1" -- sleep 600
+# Copy the backup file into the pod, then:
+kubectl exec -n legion-historic mysql-restore-tmp -- \
+  mysql -h 10.196.174.4 -P 3306 -u svcselenium -p < backup.sql
+```
+
 ### Production Deployment Order
 
-1. **Run migration script** (see QE-7370 for full steps)
-2. **Audit users and assign Lead roles** (see QE-7369)
-3. **Deploy updated application code** (`docker compose pull && docker compose up -d`)
-4. **Smoke test**: log in, confirm role in session, attempt deletion as Lead and as Viewer
+1. **Back up the DB** (see backup procedure above)
+2. **Run migration script** (see QE-7370 for full steps)
+3. **Assign Lead roles** (see QE-7369)
+4. **Merge PR #152** — GitHub Actions automatically builds and pushes `proget.accruentsystems.com/qe_docker/library/rfhistoric:latest` to ProGet
+5. **Confirm Actions build succeeded** (check the Actions tab in GitHub)
+6. **Deploy to Kubernetes:**
+   ```bash
+   kubectl rollout restart deployment/rfhistoric-depl -n legion-historic
+   kubectl rollout status deployment/rfhistoric-depl -n legion-historic
+   ```
+7. **Smoke test**: log in, confirm role in session, attempt deletion as Lead and as Viewer
 
 ### Running the Migration Script
 
