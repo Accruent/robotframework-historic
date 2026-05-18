@@ -52,11 +52,15 @@
             <li class="nav-item">
                 {% if session['name'] %}
                 <a class="btn btn-light text-primary" type=button href="/logout"> <i class="fa fa-sign-out"></i><b>Logout</b></a>
+                {% if session.get('role') == 'lead' %}
                 <a class="btn btn-light text-primary" type=button href="/register"><i class="fa fa-plus-circle"></i> <b>New User</b></a>
+                {% endif %}
                 {% else %}
                 <a class="btn btn-light text-primary" type=button href="/login"><i class="fa fa-user-circle"></i> <b>Login</b></a>
                 {% endif %}
+                {% if session.get('role') == 'lead' %}
                 <a class="btn btn-light text-primary" type=button href="/newdb"><i class="fa fa-plus-circle"></i> <b>New Project</b></a>
+                {% endif %}
             </li>
             </ul>
         </div>

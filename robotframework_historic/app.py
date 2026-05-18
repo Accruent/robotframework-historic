@@ -74,6 +74,8 @@ def logout():
 
 @app.route('/register', methods=["GET", "POST"])
 def register():
+    if session.get('role') != 'lead':
+        return 'Forbidden', 403
     if request.method == 'GET':
         return render_template("register.html")
     else:
@@ -93,6 +95,8 @@ def register():
 
 @app.route('/newdb', methods=['GET', 'POST'])
 def add_db():
+    if session.get('role') != 'lead':
+        return 'Forbidden', 403
     if request.method == "POST":
         db_name = request.form['dbname']
         db_desc = request.form['dbdesc']
