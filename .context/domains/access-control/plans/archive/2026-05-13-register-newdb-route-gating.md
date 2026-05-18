@@ -3,8 +3,9 @@ date: 2026-05-13
 author: Neil Howell
 domain: access-control
 jira: QE-7371
-research: .context/domains/access-control/research/current/2026-05-13-register-newdb-route-gating.md
+research: .context/domains/access-control/research/archive/2026-05-13-register-newdb-route-gating.md
 status: complete
+completed: 2026-05-18
 phases: 2
 ---
 
@@ -217,9 +218,9 @@ No schema changes — no migration script required.
 6. Deploying host pulls new `latest` image and restarts the container
 
 ### Post-Deployment Smoke Check
-- Unauthenticated: `GET /register` and `GET /newdb` return 403
-- Lead: `/register` and `/newdb` render forms normally
-- Nav bar: "New User" and "New Project" buttons visible only when logged in as Lead
+- [x] Unauthenticated: `GET /register` and `GET /newdb` return 403
+- [x] Lead: `/register` and `/newdb` render forms normally
+- [x] Nav bar: "New User" and "New Project" buttons visible only when logged in as Lead
 
 ---
 
