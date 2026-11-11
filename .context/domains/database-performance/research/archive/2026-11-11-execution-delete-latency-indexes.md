@@ -4,14 +4,14 @@ author: Neil Howell
 domain: database-performance
 jira: QE-7617
 scope: "robotframework_historic/app.py, robotframework_historic/templates/deleconf.html, docker/init.sql, scripts/migrate_qe7360.py, scripts/rollback_qe7360.py, docker-compose.yml, Dockerfile"
-status: draft
+status: complete
 ---
 
 # Research: Execution Delete Latency and Missing Execution_Id Indexes
 ## Jira: QE-7617 — RF Historic | Reduce slow execution deletes and add missing Execution_Id indexes
 
 ### Research Question
-What do we need to know to close QE-7617? Specifically: where project schemas are created, how execution deletion works, which queries filter on `Execution_Id`, what migration conventions exist, and what constraints apply to adding `Execution_Id` indexes to `TB_SUITE` and `TB_TEST`.
+What is needed to make execution deletes fast? Specifically: where project schemas are created, how execution deletion works, which queries filter on `Execution_Id`, what migration conventions exist, and what constraints apply to adding `Execution_Id` indexes to `TB_SUITE` and `TB_TEST`.
 
 ### Summary
 Project databases have no secondary index on `Execution_Id` in `TB_SUITE` or `TB_TEST` in any schema-creation path in this repo: the `/newdb` route (`app.py:115-131`), the local seed (`docker/init.sql`), or the QE-7360 migration. Only `TB_DELETION_LOG` declares indexes (`execution_id`, `deleted_at`). The delete handler `delete_eid` (`app.py:236-277`) runs an audit `INSERT ... SELECT`, three `DELETE ... WHERE Execution_Id=...` statements, two `TB_EXECUTION` reads, and a `robothistoric.TB_PROJECT` update in a single transaction, committed once, followed by a 302 to `ehistoric`. The confirmation page triggers it via a plain `<a href>` GET link. A precedent exists for idempotent, per-project migrations (`scripts/migrate_qe7360.py` and `scripts/rollback_qe7360.py`). It iterates `robothistoric.TB_PROJECT` and runs DDL in each project DB. Local dev uses MySQL 5.7. The production engine/version is not recorded in this repo. Suite/test rows are not written by this repo. Ingestion happens elsewhere.

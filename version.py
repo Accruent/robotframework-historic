@@ -1,2 +1,3 @@
 """Pypi version goes here. Update with releases."""
-VERSION = "0.2.1"
+
+VERSION = "0.2.2"

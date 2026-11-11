@@ -3,8 +3,8 @@ date: 2026-11-11
 author: Neil Howell
 domain: database-performance
 jira: QE-7617
-research: .context/domains/database-performance/research/current/2026-11-11-execution-delete-latency-indexes.md
-status: draft
+research: .context/domains/database-performance/research/archive/2026-11-11-execution-delete-latency-indexes.md
+status: in-progress
 phases: 4
 ---
 
@@ -147,7 +147,7 @@ Use the seed data. Record before/after SQL counts for each case:
 2. **Baseline** (no indexes; run the Phase 1 rollback if needed). Run `EXPLAIN SELECT Test_Id FROM Famis360Full.TB_TEST WHERE Execution_Id=<eid>` and the same for `TB_SUITE` → expect `type=ALL`. Delete 3 or more real executions as Lead via `Measure-Command { Invoke-WebRequest http://localhost:5001/Famis360Full/edelete/<eid> -WebSession $session -MaximumRedirection 0 -SkipHttpErrorCheck }`. Record end-to-end time, the app timing log line and the child-row counts.
 3. Run `python /tmp/migrate_qe7617.py --host db --db Famis360Full` and record the index build time per table.
 4. **After**: EXPLAIN → expect `type=ref`, `key=idx_suite_execution_id` / `idx_test_execution_id`. Delete 3 or more different executions with similar child-row counts and record the same measurements.
-5. Record the results table (run, eid, suite rows, test rows, per-statement and total times, load context) in a new section of this plan and as a ticket comment.
+5. Record the results table (run, eid, suite rows, test rows, per-statement and total times, load context) in a new section of this plan.
 
 ### Success Criteria
 - [x] Indexed plans confirmed for both predicates
@@ -184,20 +184,27 @@ Write a separate addendum plan that moves child-row deletion to a background wor
   - `qa-rfhistoric-mysql` (Flexible Server 5.7): 64 GB with autogrow enabled. 11.0 GB used (16%). Backup retention is 12 days; the earliest restore point is 2026-10-30.
 - [x] Agree a low-ingestion window with the ingestion owners. (Approved; ran 2026-11-11 ~21:10 UTC.)
   - Proposed window, from 30 days of `Execution_Date` data (UTC): Saturday or Sunday, 20:00–22:00 or 16:00–17:00. Busiest hours are 22:00 and 09:00–11:00.
-- [x] Run `--all --dry-run` against production (read-only) → inventory output saved to the ticket.
-  - Ran 2026-11-11: 79 DBs and 158 indexes to add, `ok=158 skip=0 warn=0 error=0`. About 7.4 GB of data in total; the largest table is 1.16 GB. Not yet posted to the ticket.
+- [x] Run `--all --dry-run` against production (read-only) and record the inventory.
+  - Ran 2026-11-11: 79 DBs and 158 indexes to add, `ok=158 skip=0 warn=0 error=0`. About 7.4 GB of data in total; the largest table is 1.16 GB.
 
 ### Steps
-1. Merge the PR into `master`. Jenkins builds and pushes the `rfhistoric` image (`latest` and `{BUILD_NUMBER}`), and the deployment pulls it.
-2. `kubectl --context Legion-a6d6a7a -n legion-historic cp scripts/migrate_qe7617.py <pod>:/tmp/`, then run it in the pod with the pod's env credentials: `--db Famis360Full`. Monitor the Azure metrics (CPU, IO, storage) and `SHOW PROCESSLIST` for metadata-lock waits.
-3. Smoke test: history, metrics and compare pages load; one new ingestion completes; delete one disposable execution and check the timing log line.
-4. Run the remaining DBs with `--db` in small batches, or `--all` once confidence is established. Watch for `[ERROR]` lines.
-5. Abort plan: `KILL` the ALTER's connection, which leaves the table unchanged, or run `rollback_qe7617.py --db <name>`.
+The migration is independent of the image: the app works with or without the indexes. It was run before the merge.
+1. Run the migration in the pod with the pod's env credentials (`PASSWORD` is read from the environment): `Get-Content scripts/migrate_qe7617.py -Raw | kubectl --context Legion-a6d6a7a -n legion-historic exec -i <pod> -- sh -c 'python - --host "$SQLHOST" --user "$USERNAME" --db Famis360Full'`. Monitor the Azure metrics (CPU, IO, storage) and `SHOW PROCESSLIST` for metadata-lock waits.
+2. Smoke test: history, metrics and compare pages load; one new ingestion completes; delete one disposable execution and check the timing log line.
+3. Run the remaining DBs with `--db` in small batches, or `--all` once confidence is established. Watch for `[ERROR]` lines.
+4. Bump `version.py`, merge the PR into `master`, and confirm the `Build and Publish Docker Image` workflow pushes `rfhistoric:latest` and `:<version>` to ProGet. Restart the deployment to pull the new image.
+5. Abort plan: `KILL` the ALTER's connection, which leaves the table unchanged, or run the rollback. The rollback imports `migrate_qe7617.py`, so copy both scripts first: `kubectl cp scripts/migrate_qe7617.py <pod>:/tmp/`, `kubectl cp scripts/rollback_qe7617.py <pod>:/tmp/`, then `python /tmp/rollback_qe7617.py --host "$SQLHOST" --user "$USERNAME" --db <name>`.
+
+### Production Results (2026-11-11 ~21:10 UTC)
+- `--all`: `ok=158 skip=0 warn=0 error=0` across 79 DBs. Index build time totalled 412 s; the slowest was `Famis360Full.TB_TEST` at 71.0 s.
+- `EXPLAIN` on `Famis360Full` for both predicates: `type=ref`, `key=idx_suite_execution_id` / `idx_test_execution_id`.
+- Post-rollout check at 21:36 UTC: all pods running with 0 restarts; no `Traceback`/`Error`/lock-wait lines in the app log; no lock-waiting or long-running queries in `PROCESSLIST`; three `edelete` requests served. No ingestion had landed since the rollout yet.
 
 ### Success Criteria
 - [x] Migration output shows `[OK]`/`[SKIP]` for every DB and no `[ERROR]`; rerun shows all `[SKIP]`
 - [x] Production `EXPLAIN` on `Famis360Full` uses the new indexes
-- [ ] No sustained lock waits or application errors during or after the rollout; ingestion is normal
+- [ ] No sustained lock waits or application errors during or after the rollout; ingestion is normal (lock waits and errors clean at 21:36 UTC; awaiting the first post-rollout ingestion)
+- [ ] `rfhistoric:0.2.2` pushed to ProGet and running in `legion-historic`
 
 ---
 
@@ -232,7 +239,7 @@ There is no unit test framework in the repo, and this plan does not add one. Cov
 ---
 
 ## References
-- Research: `.context/domains/database-performance/research/current/2026-11-11-execution-delete-latency-indexes.md`
+- Research: `.context/domains/database-performance/research/archive/2026-11-11-execution-delete-latency-indexes.md`
 - Delete handler: `robotframework_historic/app.py:236-277`
 - New-project DDL: `robotframework_historic/app.py:122-146`
 - Migration precedent: `scripts/migrate_qe7360.py`, `scripts/rollback_qe7360.py`

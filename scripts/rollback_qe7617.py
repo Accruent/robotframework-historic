@@ -6,7 +6,10 @@ Equivalent indexes with other names are left in place.
 
 Usage:
     python scripts/rollback_qe7617.py (--all | --db NAME [--db NAME ...]) [--dry-run]
-        [--host HOST] [--port PORT] [--user USER] [--password PASSWORD]
+        [--host HOST] [--port PORT] [--user USER]
+
+The password is read from MYSQL_PWD or PASSWORD, otherwise prompted.
+Requires migrate_qe7617.py in the same directory.
 """
 
 import sys
@@ -14,8 +17,14 @@ import time
 
 import MySQLdb
 
-from migrate_qe7617 import (INDEXES, db_exists, get_connection, list_projects,
-                            parse_args, quote_ident)
+from migrate_qe7617 import (
+    INDEXES,
+    db_exists,
+    get_connection,
+    list_projects,
+    parse_args,
+    quote_ident,
+)
 
 
 def index_exists(cursor, db, table, name):
@@ -29,13 +38,17 @@ def index_exists(cursor, db, table, name):
 
 def drop_index(cursor, db, table, name, dry_run):
     sql = "ALTER TABLE %s.%s DROP INDEX %s, ALGORITHM=INPLACE, LOCK=NONE" % (
-        quote_ident(db), quote_ident(table), quote_ident(name))
+        quote_ident(db),
+        quote_ident(table),
+        quote_ident(name),
+    )
     if dry_run:
         print("  [DRY-RUN] drop %s.%s %s" % (db, table, name))
         return
     start = time.monotonic()
     cursor.execute(sql)
-    print("  [OK] dropped %s.%s %s (%.1fs)" % (db, table, name, time.monotonic() - start))
+    elapsed = time.monotonic() - start
+    print("  [OK] dropped %s.%s %s (%.1fs)" % (db, table, name, elapsed))
 
 
 def main():

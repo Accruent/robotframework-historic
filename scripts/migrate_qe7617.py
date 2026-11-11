@@ -6,25 +6,30 @@ registered in robothistoric.TB_PROJECT, unless an index led by Execution_Id exis
 
 Usage:
     python scripts/migrate_qe7617.py (--all | --db NAME [--db NAME ...]) [--dry-run]
-        [--host HOST] [--port PORT] [--user USER] [--password PASSWORD]
+        [--host HOST] [--port PORT] [--user USER]
+
+The password is read from MYSQL_PWD or PASSWORD, otherwise prompted.
 """
 
 import argparse
+import getpass
+import os
 import sys
 import time
 
 import MySQLdb
 
-
-INDEXES = [("TB_SUITE", "idx_suite_execution_id"), ("TB_TEST", "idx_test_execution_id")]
+INDEXES = [
+    ("TB_SUITE", "idx_suite_execution_id"),
+    ("TB_TEST", "idx_test_execution_id"),
+]
 
 
 def parse_args(description):
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("--host",     default="localhost")
-    parser.add_argument("--port",     type=int, default=3306)
-    parser.add_argument("--user",     default="root")
-    parser.add_argument("--password", default="password")
+    parser.add_argument("--host", default="localhost")
+    parser.add_argument("--port", type=int, default=3306)
+    parser.add_argument("--user", default="root")
     target = parser.add_mutually_exclusive_group(required=True)
     target.add_argument("--db", action="append", metavar="NAME")
     target.add_argument("--all", action="store_true")
@@ -33,12 +38,15 @@ def parse_args(description):
 
 
 def get_connection(args):
+    password = os.environ.get("MYSQL_PWD") or os.environ.get("PASSWORD")
+    if password is None:
+        password = getpass.getpass("MySQL password: ")
     return MySQLdb.connect(
         host=args.host,
         port=args.port,
         user=args.user,
-        passwd=args.password,
-        charset='utf8',
+        passwd=password,
+        charset="utf8",
     )
 
 
@@ -47,7 +55,7 @@ def quote_ident(name):
 
 
 def list_projects(cursor, selected):
-    """Return registered project names, filtered by `selected` when given. Returns (projects, warn_count)."""
+    """Return (registered project names filtered by `selected`, warn_count)."""
     cursor.execute("SELECT Project_Name FROM robothistoric.TB_PROJECT")
     registered = [row[0] for row in cursor.fetchall()]
     if not selected:
@@ -61,7 +69,10 @@ def list_projects(cursor, selected):
 
 
 def db_exists(cursor, db):
-    cursor.execute("SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = %s", (db,))
+    cursor.execute(
+        "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = %s",
+        (db,),
+    )
     return cursor.fetchone()[0] > 0
 
 
@@ -79,9 +90,10 @@ def has_leading_execution_id_index(cursor, db, table):
 
 def print_inventory(cursor, db):
     cursor.execute(
-        "SELECT TABLE_NAME, TABLE_ROWS, ROUND((DATA_LENGTH + INDEX_LENGTH) / 1048576, 1) "
-        "FROM information_schema.TABLES "
-        "WHERE TABLE_SCHEMA = %s AND TABLE_NAME IN ('TB_SUITE', 'TB_TEST') ORDER BY TABLE_NAME",
+        "SELECT TABLE_NAME, TABLE_ROWS, "
+        "ROUND((DATA_LENGTH + INDEX_LENGTH) / 1048576, 1) "
+        "FROM information_schema.TABLES WHERE TABLE_SCHEMA = %s "
+        "AND TABLE_NAME IN ('TB_SUITE', 'TB_TEST') ORDER BY TABLE_NAME",
         (db,),
     )
     for table, rows, size_mb in cursor.fetchall():
@@ -89,8 +101,10 @@ def print_inventory(cursor, db):
 
 
 def add_index(cursor, db, table, name, dry_run):
-    sql = "ALTER TABLE %s.%s ADD INDEX %s (Execution_Id), ALGORITHM=INPLACE, LOCK=NONE" % (
-        quote_ident(db), quote_ident(table), quote_ident(name))
+    sql = (
+        "ALTER TABLE %s.%s ADD INDEX %s (Execution_Id), ALGORITHM=INPLACE, LOCK=NONE"
+        % (quote_ident(db), quote_ident(table), quote_ident(name))
+    )
     if dry_run:
         print("  [DRY-RUN] %s.%s %s" % (db, table, name))
         return
@@ -122,7 +136,9 @@ def main():
                 for table, name in INDEXES:
                     existing = has_leading_execution_id_index(cursor, db, table)
                     if existing:
-                        print("  [SKIP] %s.%s existing index %s" % (db, table, existing))
+                        print(
+                            "  [SKIP] %s.%s existing index %s" % (db, table, existing)
+                        )
                         counts["skip"] += 1
                     else:
                         add_index(cursor, db, table, name, args.dry_run)
