@@ -182,9 +182,9 @@ Write a separate addendum plan that moves child-row deletion to a background wor
   - `rfhistoric-ingress` has no timeout annotations. The `ingress-nginx/ingress-nginx-controller` ConfigMap sets `proxy-read-timeout=600` and `proxy-send-timeout=600`.
 - [x] Confirm Azure MySQL storage headroom of at least 2× the size of `TB_TEST` for `Famis360Full`. Confirm automated backups are current and point-in-time restore is available.
   - `qa-rfhistoric-mysql` (Flexible Server 5.7): 64 GB with autogrow enabled. 11.0 GB used (16%). Backup retention is 12 days; the earliest restore point is 2026-10-30.
-- [ ] Agree a low-ingestion window with the ingestion owners.
+- [x] Agree a low-ingestion window with the ingestion owners. (Approved; ran 2026-11-11 ~21:10 UTC.)
   - Proposed window, from 30 days of `Execution_Date` data (UTC): Saturday or Sunday, 20:00–22:00 or 16:00–17:00. Busiest hours are 22:00 and 09:00–11:00.
-- [ ] Run `--all --dry-run` against production (read-only) → inventory output saved to the ticket.
+- [x] Run `--all --dry-run` against production (read-only) → inventory output saved to the ticket.
   - Ran 2026-11-11: 79 DBs and 158 indexes to add, `ok=158 skip=0 warn=0 error=0`. About 7.4 GB of data in total; the largest table is 1.16 GB. Not yet posted to the ticket.
 
 ### Steps
@@ -195,8 +195,8 @@ Write a separate addendum plan that moves child-row deletion to a background wor
 5. Abort plan: `KILL` the ALTER's connection, which leaves the table unchanged, or run `rollback_qe7617.py --db <name>`.
 
 ### Success Criteria
-- [ ] Migration output shows `[OK]`/`[SKIP]` for every DB and no `[ERROR]`; rerun shows all `[SKIP]`
-- [ ] Production `EXPLAIN` on `Famis360Full` uses the new indexes
+- [x] Migration output shows `[OK]`/`[SKIP]` for every DB and no `[ERROR]`; rerun shows all `[SKIP]`
+- [x] Production `EXPLAIN` on `Famis360Full` uses the new indexes
 - [ ] No sustained lock waits or application errors during or after the rollout; ingestion is normal
 
 ---
