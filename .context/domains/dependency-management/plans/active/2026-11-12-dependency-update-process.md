@@ -172,6 +172,7 @@ updates:
         patterns: ["*"]
 ```
 Security updates are not affected by `schedule` and still open on demand.
+Ruling (2026-11-12): `reviewers` removed — GitHub dropped it from the `dependabot.yml` schema in favour of CODEOWNERS; no CODEOWNERS file was added (it would auto-request review on every PR) — if wrong, Dependabot PRs get no auto-assigned reviewer.
 
 #### 3. `pipeline.groovy`
 Delete it (only if Phase 0 found no Jenkins job).
@@ -181,7 +182,7 @@ Delete it (only if Phase 0 found no Jenkins job).
 #### Automated Verification
 - [x] `docker run --rm -v "${PWD}:/repo" -w /repo rhysd/actionlint:latest` → no errors
 - [x] `python -c "import yaml; yaml.safe_load(open('.github/dependabot.yml'))"` → exit 0 (if PyYAML is available on the system Python; otherwise rely on GitHub's validation in Phase 4)
-- [ ] Push the branch and open the PR → `PR Build Check / build-and-smoke` appears and passes
+- [x] Push the branch and open the PR → `PR Build Check / build-and-smoke` appears and passes (PR #163)
 - [ ] Negative check: push a temporary commit that changes the expected `edelete` code to `200` → check fails with `[FAIL]`; revert the commit → check passes
 
 ---
