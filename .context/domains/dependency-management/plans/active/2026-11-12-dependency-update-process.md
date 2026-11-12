@@ -77,7 +77,7 @@ A single feature PR carries Phases 1–3. Phase 0 is a read-only pre-check. Phas
 1. Jenkins: search job configs for this repo or `pipeline.groovy` (use the `jenkins-api-job-operations` skill). Record the result here.
    - No job found → delete `pipeline.groovy` in Phase 2.
    - Job found → keep the file, record the job URL, and drop that step.
-2. Record the production digest for rollback reference: `kubectl --context Legion-a6d6a7a -n legion-historic get pod -l app=rfhistoric -o jsonpath="{.items[*].status.containerStatuses[*].imageID}"` → expect `sha256:977709c9…` (or newer).
+2. Record the production digest for rollback reference: `kubectl --context Legion-a6d6a7a -n legion-historic get pod -l app=rfhistoric-app -o jsonpath="{.items[*].status.containerStatuses[*].imageID}"` → expect `sha256:977709c9…` (or newer).
 3. Confirm `:0.2.2` exists in ProGet (use the `proget-api-evidence` skill).
 
 ### Results (2026-11-12)
@@ -202,9 +202,11 @@ Sections:
 Add a short "Release and rollback" section linking `docs/RELEASE.md`.
 
 ### Success Criteria
-- [ ] Confirm the container name `rfhistoric-app` with `kubectl --context Legion-a6d6a7a -n legion-historic get deploy rfhistoric-depl -o jsonpath="{.spec.template.spec.containers[*].name}"` and correct the docs if it differs
-- [ ] Every command in `docs/RELEASE.md` is a single line and copy-paste runnable
+- [x] Confirm the container name `rfhistoric-app` with `kubectl --context Legion-a6d6a7a -n legion-historic get deploy rfhistoric-depl -o jsonpath="{.spec.template.spec.containers[*].name}"` and correct the docs if it differs
+- [x] Every command in `docs/RELEASE.md` is a single line and copy-paste runnable
 - [ ] Peer review approves the PR (1 approval required)
+
+Results (2026-11-12): container `rfhistoric-app` confirmed; pod label is `app=rfhistoric-app` (Phase 0 command corrected). Read-only doc commands run verbatim against production (`AccruentOne`, eid 961): `/`, dashboard, metrics, compare 200; `edelete` 403; 0 `Traceback` lines; digest command returns `sha256:977709c9…`. Restart/`set image` commands not executed (Phase 4).
 
 **Pause for human confirmation before Phase 4.**
 

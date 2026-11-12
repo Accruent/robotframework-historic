@@ -106,6 +106,12 @@ Robotframework-historic is a free, custom html report which provides historical 
 
 ---
 
+## Release and rollback
+
+See [docs/RELEASE.md](docs/RELEASE.md) for the release steps, post-release smoke check, rollback and dependency update cadence.
+
+---
+
 ## How to use in project
 
  - __Step 1:__ Create project in robotframework-historic - [guide](https://bit.ly/38JskhS)
