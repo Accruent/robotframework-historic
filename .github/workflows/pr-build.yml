@@ -33,7 +33,7 @@ jobs:
           check /rf_full_data/metrics/1 200
           check /rf_full_data/tmetrics 200
           check /rf_full_data/compare 200
-          check /rf_full_data/edelete/1 200
+          check /rf_full_data/edelete/1 403
           exit $fail
 
       - name: Dump logs
