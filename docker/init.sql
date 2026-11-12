@@ -76,7 +76,8 @@ CREATE TABLE IF NOT EXISTS TB_SUITE (
     Suite_Pass    INT,
     Suite_Fail    INT,
     Suite_Time    FLOAT,
-    Suite_Skip    INT
+    Suite_Skip    INT,
+    INDEX idx_suite_execution_id (Execution_Id)
 );
 
 CREATE TABLE IF NOT EXISTS TB_TEST (
@@ -92,7 +93,8 @@ CREATE TABLE IF NOT EXISTS TB_TEST (
     Test_Review_By   TEXT,
     Test_Issue_Type  TEXT,
     Test_Tag         TEXT,
-    Test_Updated     TEXT
+    Test_Updated     TEXT,
+    INDEX idx_test_execution_id (Execution_Id)
 );
 
 INSERT INTO TB_EXECUTION (Execution_Date, Execution_Desc, Execution_Total, Execution_Pass, Execution_Fail, Execution_Time, Execution_STotal, Execution_SPass, Execution_SFail, Execution_Skip, Execution_SSkip)
@@ -173,7 +175,8 @@ CREATE TABLE IF NOT EXISTS TB_SUITE (
     Suite_Pass    INT,
     Suite_Fail    INT,
     Suite_Time    FLOAT,
-    Suite_Skip    INT
+    Suite_Skip    INT,
+    INDEX idx_suite_execution_id (Execution_Id)
 );
 
 CREATE TABLE IF NOT EXISTS TB_TEST (
@@ -189,7 +192,8 @@ CREATE TABLE IF NOT EXISTS TB_TEST (
     Test_Review_By   TEXT,
     Test_Issue_Type  TEXT,
     Test_Tag         TEXT,
-    Test_Updated     TEXT
+    Test_Updated     TEXT,
+    INDEX idx_test_execution_id (Execution_Id)
 );
 
 -- Only executions - no suite or test rows (simulates roomba sync)
@@ -246,7 +250,8 @@ CREATE TABLE IF NOT EXISTS TB_SUITE (
     Suite_Pass    INT,
     Suite_Fail    INT,
     Suite_Time    FLOAT,
-    Suite_Skip    INT
+    Suite_Skip    INT,
+    INDEX idx_suite_execution_id (Execution_Id)
 );
 
 CREATE TABLE IF NOT EXISTS TB_TEST (
@@ -262,7 +267,8 @@ CREATE TABLE IF NOT EXISTS TB_TEST (
     Test_Review_By   TEXT,
     Test_Issue_Type  TEXT,
     Test_Tag         TEXT,
-    Test_Updated     TEXT
+    Test_Updated     TEXT,
+    INDEX idx_test_execution_id (Execution_Id)
 );
 
 CREATE TABLE IF NOT EXISTS TB_DELETION_LOG (

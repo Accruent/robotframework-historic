@@ -5,10 +5,13 @@ import random
 import string
 import pytz
 import datetime
+import logging
+import time
 import config
 from .args import parse_options
 
 app = Flask(__name__, template_folder='templates')
+app.logger.setLevel(logging.INFO)
 mysql = MySQL(app)
 CENTRAL = pytz.timezone('US/Central')
 
@@ -122,13 +125,15 @@ def add_db():
             cursor.execute("Create table TB_SUITE ( Suite_Id INT NOT NULL "
                            "auto_increment primary key, Execution_Id INT, Suite_Name TEXT, "
                            "Suite_Status CHAR(4), Suite_Total INT, Suite_Pass INT, "
-                           "Suite_Fail INT, Suite_Time FLOAT, Suite_Skip INT);")
+                           "Suite_Fail INT, Suite_Time FLOAT, Suite_Skip INT, "
+                           "INDEX idx_suite_execution_id (Execution_Id));")
             cursor.execute("Create table TB_TEST ( Test_Id INT NOT NULL "
                            "auto_increment primary key, Execution_Id INT, Test_Name TEXT, "
                            "Test_Status CHAR(4), Test_Time FLOAT, Test_Error TEXT, "
                            "Test_Comment TEXT, Test_Assigned_To TEXT, Test_ETA TEXT, "
                            "Test_Review_By TEXT, Test_Issue_Type TEXT, Test_Tag TEXT, "
-                           "Test_Updated TEXT);")
+                           "Test_Updated TEXT, "
+                           "INDEX idx_test_execution_id (Execution_Id));")
             cursor.execute("Create table TB_DELETION_LOG ( log_id INT NOT NULL "
                            "auto_increment primary key, execution_id INT NOT NULL, "
                            "deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
@@ -238,42 +243,74 @@ def delete_eid(db, eid):
     if session.get('role') != 'lead':
         return 'Forbidden', 403
     cursor = mysql.connection.cursor()
-    use_db(cursor, db)
-    # write audit snapshot before deleting
-    cursor.execute(
-        "INSERT INTO TB_DELETION_LOG "
-        "(execution_id, deleted_by, snapshot_execution_date, snapshot_execution_desc, "
-        "snapshot_execution_pass, snapshot_execution_fail, snapshot_execution_total, "
-        "snapshot_execution_time, snapshot_execution_stotal, snapshot_execution_spass, snapshot_execution_sfail) "
-        "SELECT Execution_Id, %s, Execution_Date, Execution_Desc, "
-        "Execution_Pass, Execution_Fail, Execution_Total, "
-        "Execution_Time, Execution_STotal, Execution_SPass, Execution_SFail "
-        "FROM TB_EXECUTION WHERE Execution_Id=%s",
-        (session.get('email'), eid)
-    )
-    # remove execution from tables: execution, suite, test
-    cursor.execute("DELETE FROM TB_EXECUTION WHERE Execution_Id='%s';" % eid)
-    cursor.execute("DELETE FROM TB_SUITE WHERE Execution_Id='%s';" % eid)
-    cursor.execute("DELETE FROM TB_TEST WHERE Execution_Id='%s';" % eid)
-    # get latest execution info
-    cursor.execute("SELECT Execution_Pass, Execution_Total from TB_EXECUTION ORDER BY Execution_Id DESC LIMIT 1;")
-    data = cursor.fetchall()
-    # get no. of executions
-    cursor.execute("SELECT COUNT(*) from TB_EXECUTION;")
-    exe_data = cursor.fetchall()
-
     try:
-        if data[0][0] > 0:
-            recent_pass_perf = float("{0:.2f}".format((data[0][0]/data[0][1]*100)))
-        else:
-            recent_pass_perf = 0
-    except:
-        recent_pass_perf = 0
+        t_start = time.monotonic()
+        use_db(cursor, db)
+        # write audit snapshot before deleting
+        cursor.execute(
+            "INSERT INTO TB_DELETION_LOG "
+            "(execution_id, deleted_by, snapshot_execution_date, snapshot_execution_desc, "
+            "snapshot_execution_pass, snapshot_execution_fail, snapshot_execution_total, "
+            "snapshot_execution_time, snapshot_execution_stotal, snapshot_execution_spass, snapshot_execution_sfail) "
+            "SELECT Execution_Id, %s, Execution_Date, Execution_Desc, "
+            "Execution_Pass, Execution_Fail, Execution_Total, "
+            "Execution_Time, Execution_STotal, Execution_SPass, Execution_SFail "
+            "FROM TB_EXECUTION WHERE Execution_Id=%s",
+            (session.get('email'), eid)
+        )
+        if cursor.rowcount == 0:
+            # execution already deleted or never existed
+            mysql.connection.rollback()
+            return redirect(url_for('ehistoric', db = db))
+        t = time.monotonic()
+        t_audit = t - t_start
 
-    # update robothistoric project
-    cursor.execute("UPDATE robothistoric.TB_PROJECT SET Total_Executions=%s, Last_Updated=now(), Recent_Pass_Perc=%s WHERE Project_Name='%s';" % (int(exe_data[0][0]), recent_pass_perf, db))
-    # commit changes
-    mysql.connection.commit()
+        cursor.execute("DELETE FROM TB_EXECUTION WHERE Execution_Id=%s", (eid,))
+        rows_exec = cursor.rowcount
+        t_exec = time.monotonic() - t
+        t = time.monotonic()
+        cursor.execute("DELETE FROM TB_SUITE WHERE Execution_Id=%s", (eid,))
+        rows_suite = cursor.rowcount
+        t_suite = time.monotonic() - t
+        t = time.monotonic()
+        cursor.execute("DELETE FROM TB_TEST WHERE Execution_Id=%s", (eid,))
+        rows_test = cursor.rowcount
+        t_test = time.monotonic() - t
+        t = time.monotonic()
+
+        cursor.execute("SELECT Execution_Pass, Execution_Total from TB_EXECUTION ORDER BY Execution_Id DESC LIMIT 1;")
+        data = cursor.fetchall()
+        cursor.execute("SELECT COUNT(*) from TB_EXECUTION;")
+        exe_data = cursor.fetchall()
+
+        try:
+            if data[0][0] > 0:
+                recent_pass_perf = float("{0:.2f}".format((data[0][0]/data[0][1]*100)))
+            else:
+                recent_pass_perf = 0
+        except:
+            recent_pass_perf = 0
+
+        cursor.execute(
+            "UPDATE robothistoric.TB_PROJECT SET Total_Executions=%s, Last_Updated=now(), "
+            "Recent_Pass_Perc=%s WHERE Project_Name=%s",
+            (int(exe_data[0][0]), recent_pass_perf, db)
+        )
+        t_summary = time.monotonic() - t
+        t = time.monotonic()
+        mysql.connection.commit()
+        t_commit = time.monotonic() - t
+    except MySQLdb.Error:
+        mysql.connection.rollback()
+        app.logger.exception("edelete failed db=%s eid=%s", db, eid)
+        return 'Delete failed; no changes were saved', 500
+
+    app.logger.info(
+        "edelete db=%s eid=%s rows exec=%d suite=%d test=%d t_audit=%.3f t_exec=%.3f "
+        "t_suite=%.3f t_test=%.3f t_summary=%.3f t_commit=%.3f total=%.3f",
+        db, eid, rows_exec, rows_suite, rows_test, t_audit, t_exec,
+        t_suite, t_test, t_summary, t_commit, time.monotonic() - t_start
+    )
     return redirect(url_for('ehistoric', db = db))
 
 @app.route('/<db>/tmetrics', methods=['GET', 'POST'])
