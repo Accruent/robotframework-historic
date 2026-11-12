@@ -4,7 +4,7 @@ author: Neil Howell
 domain: database-performance
 jira: QE-7617
 research: .context/domains/database-performance/research/archive/2026-11-11-execution-delete-latency-indexes.md
-status: in-progress
+status: complete
 phases: 4
 ---
 
@@ -199,12 +199,14 @@ The migration is independent of the image: the app works with or without the ind
 - `--all`: `ok=158 skip=0 warn=0 error=0` across 79 DBs. Index build time totalled 412 s; the slowest was `Famis360Full.TB_TEST` at 71.0 s.
 - `EXPLAIN` on `Famis360Full` for both predicates: `type=ref`, `key=idx_suite_execution_id` / `idx_test_execution_id`.
 - Post-rollout check at 21:36 UTC: all pods running with 0 restarts; no `Traceback`/`Error`/lock-wait lines in the app log; no lock-waiting or long-running queries in `PROCESSLIST`; three `edelete` requests served. No ingestion had landed since the rollout yet.
+- 2026-11-12 13:59 UTC: 30 projects updated since the rollout (latest 13:31 UTC); no queries running over 60 s.
+- Release: PR #161 merged (`c0abca2`); workflow run `43231199708` pushed `rfhistoric:0.2.2` and `:latest`. `rfhistoric-depl` restarted onto `sha256:977709c9…`; `/` returns 200, unauthenticated `edelete` returns 403.
 
 ### Success Criteria
 - [x] Migration output shows `[OK]`/`[SKIP]` for every DB and no `[ERROR]`; rerun shows all `[SKIP]`
 - [x] Production `EXPLAIN` on `Famis360Full` uses the new indexes
-- [ ] No sustained lock waits or application errors during or after the rollout; ingestion is normal (lock waits and errors clean at 21:36 UTC; awaiting the first post-rollout ingestion)
-- [ ] `rfhistoric:0.2.2` pushed to ProGet and running in `legion-historic`
+- [x] No sustained lock waits or application errors during or after the rollout; ingestion is normal
+- [x] `rfhistoric:0.2.2` pushed to ProGet and running in `legion-historic`
 
 ---
 
