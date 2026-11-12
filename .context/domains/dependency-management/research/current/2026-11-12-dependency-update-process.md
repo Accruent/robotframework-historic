@@ -21,7 +21,6 @@ Dependabot runs `pip` updates daily with no `groups` block (`.github/dependabot.
 ### Detailed Findings
 
 #### 1. Ticket Context (from Jira)
-- Status: Develop.
 - Scope: merge or close #158/#159/#160 (#158 must be confirmed to resolve the open setuptools alerts). Remove `robotframework` instead if nothing needs it. Change the Dependabot schedule to weekly or monthly and add `groups`. Add a PR workflow that builds without pushing and starts the container. Document a post-release smoke check (`/` 200, unauthenticated `/<db>/edelete/<id>` 403, and the dashboard/metrics/compare pages load). Rollback is a redeploy of the previous image tag.
 - AC: no unaddressed Dependabot PRs or alerts, at most one grouped PR per cycle, a PR build check that shows on every PR to master, and smoke and rollback steps documented in the repo.
 - The ticket says the test workflow should run "the tests from the linked ticket" once they exist.
