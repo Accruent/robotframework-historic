@@ -183,7 +183,7 @@ Delete it (only if Phase 0 found no Jenkins job).
 - [x] `docker run --rm -v "${PWD}:/repo" -w /repo rhysd/actionlint:latest` → no errors
 - [x] `python -c "import yaml; yaml.safe_load(open('.github/dependabot.yml'))"` → exit 0 (if PyYAML is available on the system Python; otherwise rely on GitHub's validation in Phase 4)
 - [x] Push the branch and open the PR → `PR Build Check / build-and-smoke` appears and passes (PR #163)
-- [ ] Negative check: push a temporary commit that changes the expected `edelete` code to `200` → check fails with `[FAIL]`; revert the commit → check passes
+- [x] Negative check: push a temporary commit that changes the expected `edelete` code to `200` → check fails with `[FAIL]`; revert the commit → check passes (run 43287647250 failed with `[FAIL] /rf_full_data/edelete/1 got 403`; revert run 43288055753 passed)
 
 ---
 
