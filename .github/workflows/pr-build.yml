@@ -1,0 +1,45 @@
+name: PR Build Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker compose build rfhistoric
+
+      - name: Start stack
+        run: docker compose up -d
+
+      - name: Smoke test
+        run: |
+          # Retries cover MySQL init, during which the app returns errors.
+          curl -fsS --retry 30 --retry-delay 2 --retry-all-errors -o /dev/null http://localhost:5001/
+          fail=0
+          check() {
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:5001$1")
+            if [ "$code" != "$2" ]; then echo "[FAIL] $1 got $code"; fail=1; else echo "[PASS] $1 $code"; fi
+          }
+          check /rf_full_data/dashboard 200
+          check /rf_full_data/metrics/1 200
+          check /rf_full_data/tmetrics 200
+          check /rf_full_data/compare 200
+          check /rf_full_data/edelete/1 403
+          exit $fail
+
+      - name: Dump logs
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
