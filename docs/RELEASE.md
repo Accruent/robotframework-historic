@@ -23,6 +23,7 @@ Production runs in AKS: context `Legion-a6d6a7a`, namespace `legion-historic`, d
    ```
 
 5. Run the post-release smoke check below.
+6. Publish the Release Drafter draft on the Releases page. Set the tag and title to `v<VERSION>` (from `version.py`) if they differ, and mark it Latest.
 
 ## Post-release smoke check
 
@@ -44,10 +45,10 @@ Expect 403 (unauthenticated delete is blocked):
 (Invoke-WebRequest "$base/$db/edelete/$eid" -UseBasicParsing -SkipHttpErrorCheck).StatusCode
 ```
 
-Expect no output:
+Expect no output (reads the newest pod; `logs deploy/...` can pick a terminating old pod):
 
 ```powershell
-kubectl --context Legion-a6d6a7a -n legion-historic logs deploy/rfhistoric-depl | Select-String Traceback
+kubectl --context Legion-a6d6a7a -n legion-historic logs (kubectl --context Legion-a6d6a7a -n legion-historic get pod -l app=rfhistoric-app --sort-by=.metadata.creationTimestamp -o name | Select-Object -Last 1) | Select-String Traceback
 ```
 
 ## Rollback
