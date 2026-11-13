@@ -16,6 +16,9 @@ categories:
       - 'tech debt'
       - 'security fix'
       - 'security vulnerability'
+# Resolves to the next patch after the latest release; make it match version.py before publishing.
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
 template: |
   ## What’s Changed
   $CHANGES

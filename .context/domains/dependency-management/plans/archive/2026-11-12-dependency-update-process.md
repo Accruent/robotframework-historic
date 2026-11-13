@@ -3,8 +3,8 @@ date: 2026-11-12
 author: Neil Howell
 domain: dependency-management
 jira: QE-7618
-research: .context/domains/dependency-management/research/current/2026-11-12-dependency-update-process.md
-status: draft
+research: .context/domains/dependency-management/research/archive/2026-11-12-dependency-update-process.md
+status: complete
 phases: 5
 ---
 
@@ -204,7 +204,7 @@ Add a short "Release and rollback" section linking `docs/RELEASE.md`.
 ### Success Criteria
 - [x] Confirm the container name `rfhistoric-app` with `kubectl --context Legion-a6d6a7a -n legion-historic get deploy rfhistoric-depl -o jsonpath="{.spec.template.spec.containers[*].name}"` and correct the docs if it differs
 - [x] Every command in `docs/RELEASE.md` is a single line and copy-paste runnable
-- [ ] Peer review approves the PR (1 approval required)
+- [x] Peer review approves the PR (1 approval required)
 
 Results (2026-11-12): container `rfhistoric-app` confirmed; pod label is `app=rfhistoric-app` (Phase 0 command corrected). Read-only doc commands run verbatim against production (`AccruentOne`, eid 961): `/`, dashboard, metrics, compare 200; `edelete` 403; 0 `Traceback` lines; digest command returns `sha256:977709c9…`. Restart/`set image` commands not executed (Phase 4).
 
@@ -229,12 +229,23 @@ Results (2026-11-12): container `rfhistoric-app` confirmed; pod label is `app=rf
 8. Notify the `robotframework-historic-parser` owner about its `setuptools~=84.0.0` pin (alert #5 fix is 84.1.0).
 9. Spin down this ticket's local stack: `docker compose -p qe-7618 down -v`.
 
+### Results (2026-11-13)
+- #163 merged (`0dfb1c2`); #164 (`actions-all` group, plus `release-drafter` job permissions) merged (`f8ebd53`). Publish pushed `:latest` and `:0.3.0`; #164 re-pushed `:0.3.0` (no version bump).
+- Released: pod `rfhistoric-depl-67b9579fdb-8n96q` runs `rfhistoric@sha256:a924c4f99de3229cae1c54260113165c7bfab48f4a7ced54f80deefaecc6a667`. Smoke check (`mc`, eid 5062, 3x each): `/`, dashboard, metrics, compare 200; `edelete` 403; 0 `Traceback` in the new pod. `logs deploy/...` read the terminating old pod, so `docs/RELEASE.md` now targets the newest pod.
+- GitHub release `v0.3.0` published (tag on `f8ebd53`). Release Drafter left the draft untagged; `name-template`/`tag-template` added.
+- #158, #159, #160 closed as superseded. 0 open Dependabot alerts.
+- `build-and-smoke` required on `master` (PATCH returned 404; full protection PUT preserved existing settings).
+- Dependabot resumed: grouped `actions-all` PR #164 opened 2026-11-13.
+- Confluence 1336247055 updated to version 19. Bitbucket `ops_azure_ansible_k8` links annotated as possibly stale (no GitHub repo found).
+- Local `qe-7618` stack removed.
+- Step 8 (parser owner notification) left to the owner of this plan.
+
 ### Success Criteria
-- [ ] `rfhistoric:0.3.0` running in `legion-historic`; smoke check passes
-- [ ] No open Dependabot PRs older than the current cycle; no open Dependabot alerts
-- [ ] `build-and-smoke` required on `master`
-- [ ] Dependabot resumed; at most one grouped PR per ecosystem per cycle
-- [ ] Confluence page updated
+- [x] `rfhistoric:0.3.0` running in `legion-historic`; smoke check passes
+- [x] No open Dependabot PRs older than the current cycle; no open Dependabot alerts
+- [x] `build-and-smoke` required on `master`
+- [x] Dependabot resumed; at most one grouped PR per ecosystem per cycle
+- [x] Confluence page updated
 
 ---
 
@@ -271,7 +282,7 @@ The repo has no unit test framework, and this plan does not add one (QE-7619 doe
 ---
 
 ## References
-- Research: `.context/domains/dependency-management/research/current/2026-11-12-dependency-update-process.md`
+- Research: `.context/domains/dependency-management/research/archive/2026-11-12-dependency-update-process.md`
 - Publish workflow: `.github/workflows/build-and-publish.yml:3-58`
 - Dependabot config: `.github/dependabot.yml:1-11`
 - Dependencies: `requirements.txt:1-7`, `setup.py:8-9`, `setup.py:31`
