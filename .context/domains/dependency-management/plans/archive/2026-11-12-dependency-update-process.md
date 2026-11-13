@@ -238,7 +238,7 @@ Results (2026-11-12): container `rfhistoric-app` confirmed; pod label is `app=rf
 - Dependabot resumed: grouped `actions-all` PR #164 opened 2026-11-13.
 - Confluence 1336247055 updated to version 19. Bitbucket `ops_azure_ansible_k8` links annotated as possibly stale (no GitHub repo found).
 - Local `qe-7618` stack removed.
-- Step 8 (parser owner notification) left to the owner of this plan.
+- Step 8 (parser `setuptools` pin): moved to QE-7636, which reviews the parser repo's dependencies and update process.
 
 ### Success Criteria
 - [x] `rfhistoric:0.3.0` running in `legion-historic`; smoke check passes
