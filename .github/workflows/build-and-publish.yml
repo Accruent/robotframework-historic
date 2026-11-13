@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Get version
         id: version
@@ -38,7 +38,7 @@ jobs:
           echo "[INFO] Building version: $VERSION"
 
       - name: Log in to ProGet Docker registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.PROGET_REGISTRY }}
           username: ${{ secrets.PROGET_USERNAME }}
