@@ -116,26 +116,21 @@ See [docs/RELEASE.md](docs/RELEASE.md) for the release steps, post-release smoke
 
 The pytest suite runs in a `tests` compose service against the seeded MySQL. No venv or host Python is needed; you only need Git and Docker with the Compose plugin (`docker compose version` should print a version).
 
-Run every command from the repository root, the folder that contains `docker-compose.yml`. Running them anywhere else fails with `no configuration file provided: not found`.
+Run every command from the root of your working copy (the clone or worktree you are developing in), the folder that contains `docker-compose.yml`. Running them anywhere else fails with `no configuration file provided: not found`.
 
-1. Clone the repo and change into it (skip if you already have a clone):
-   ```
-   git clone https://github.com/Accruent/robotframework-historic.git
-   cd robotframework-historic
-   ```
-2. Start the database. On first start MySQL loads the seed data; the tests wait up to 120 s for it:
+1. Start the database. On first start MySQL loads the seed data; the tests wait up to 120 s for it:
    ```
    docker compose up -d db
    ```
-3. Run the full suite. The first run builds the `tests` image. Expect a summary like `64 passed, 2 xfailed`:
+2. Run the full suite. The first run builds the `tests` image. Expect a summary like `64 passed, 2 xfailed`:
    ```
    docker compose --profile test run --rm tests
    ```
-4. Optional: run a single file, or pass any other pytest arguments:
+3. Optional: run a single file, or pass any other pytest arguments:
    ```
    docker compose --profile test run --rm tests pytest tests/test_delete_flow.py -v
    ```
-5. When finished, stop the stack and delete the database volume:
+4. When finished, stop the stack and delete the database volume:
    ```
    docker compose --profile test down -v
    ```
