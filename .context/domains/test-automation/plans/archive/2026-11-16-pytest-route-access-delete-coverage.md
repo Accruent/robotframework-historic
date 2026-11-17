@@ -3,8 +3,8 @@ date: 2026-11-16
 author: Neil Howell
 domain: test-automation
 jira: QE-7619
-research: .context/domains/test-automation/research/current/2026-11-16-pytest-route-access-delete-coverage.md
-status: draft
+research: .context/domains/test-automation/research/archive/2026-11-16-pytest-route-access-delete-coverage.md
+status: complete
 phases: 4
 ---
 
@@ -316,6 +316,6 @@ Note that no venv or host Python is needed and that tests leave the seed DBs unc
 - `master` branch protection with `build-and-smoke` as the required check (set up by QE-7618). It needs no change.
 
 ## References
-- Research: `.context/domains/test-automation/research/current/2026-11-16-pytest-route-access-delete-coverage.md`
+- Research: `.context/domains/test-automation/research/archive/2026-11-16-pytest-route-access-delete-coverage.md`
 - Manual cases source: `.github/copilot-instructions.md`, `.context/domains/database-performance/plans/archive/2026-11-11-execution-delete-latency-indexes.md`
 - CI: `.github/workflows/pr-build.yml`
