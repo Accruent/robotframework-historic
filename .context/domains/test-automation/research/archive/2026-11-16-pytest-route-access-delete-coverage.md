@@ -11,7 +11,7 @@ status: complete
 ## Jira: QE-7619 — RF Historic | Add lightweight pytest coverage for routes, access control and delete flow
 
 ### Research Question
-What do we need to know to close QE-7619?
+What do we need to know to implement QE-7619?
 
 ### Summary
 The repo has no tests, no `tests/` directory, no pytest config, and pytest is not in `requirements.txt`. The app is one module-level Flask object (`app.py:13`) with `MySQL(app)` bound at import (`app.py:15`). MySQL config and `secret_key` are only set inside `main()` (`app.py:465-481`), so a test fixture must set them on the imported `app` itself. The compose `db` service publishes no host port (`docker-compose.yml:5-18`), so a host-side `test_client` cannot reach MySQL without a port mapping or running pytest inside the compose network. `docker/init.sql` seeds three project DBs and one `lead` user (`admin@local`/`admin`). No `viewer` user is seeded. All five ticket areas map to existing code: lead guards on 6 routes, the `edelete` transaction with audit, idempotence and 500 rollback, `/newdb` index DDL, and an idempotent `migrate_qe7617.py` with `--dry-run`. The PR workflow `pr-build.yml` exists. Its job `build-and-smoke` runs curl smoke checks against compose. The QE-7618 plan records it as the required status check on `master`.
@@ -21,7 +21,6 @@ The repo has no tests, no `tests/` directory, no pytest config, and pytest is no
 ### Detailed Findings
 
 #### 1. Ticket Context (from Jira)
-- Status: Develop.
 - Approach: pytest + Flask `test_client` against the docker-compose MySQL seed. No SQL mocking.
 - Scope: `tests/conftest.py` app fixture pointed at the compose DB, with helpers for unauthenticated, viewer and lead sessions. Smoke tests return 200 for read-only pages on every seed DB. Access-control tests cover 403/allowed. Delete-flow tests cover rows removed, one audit row, summary updated, a repeat writing no second audit row, and a forced DB error giving 500 with rollback. Schema tests cover `/newdb` indexes and `migrate_qe7617` dry-run/rerun idempotence. Tests run in the PR workflow on compose services.
 - Out of scope: browser/UI automation, coverage targets, refactoring `app.py`.
@@ -146,9 +145,9 @@ The repo has no tests, no `tests/` directory, no pytest config, and pytest is no
 - **CI:** add a pytest step to the existing `build-and-smoke` job, or add a second job and make it a required check.
 - **Migration tests:** run `scripts/migrate_qe7617.py --db <name> --dry-run` and the rerun via `subprocess`, then assert `[SKIP]` and exit 0.
 
-### Open Questions
-- Where should pytest run locally without a venv: the host system Python, or inside a container?
-- Should pytest and test deps go in `requirements.txt` (which ships in the image) or in a separate file?
-- Should the viewer user be seeded in `init.sql` or created per test?
-- Should tests be added to the existing required `build-and-smoke` job or to a separate job? A separate job would need branch protection updated.
-- What is the "linked dependency-process ticket" (QE-7618) PR workflow scope? `pr-build.yml` already exists from it.
+### Resolved Questions
+- Where should pytest run without a venv? In a dedicated `tests` compose service on the `rf` network.
+- Where do test deps go? A separate `requirements-test.txt`, so the app image is unchanged.
+- How is the viewer covered? Session injection via `client.session_transaction()`; no new seed user.
+- Which CI job runs the tests? A `Run pytest` step in the existing required `build-and-smoke` job; branch protection is unchanged.
+- What is the QE-7618 PR workflow scope? It created `pr-build.yml` and the required check; this work only adds a step to it.
