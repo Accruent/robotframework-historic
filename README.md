@@ -112,6 +112,20 @@ See [docs/RELEASE.md](docs/RELEASE.md) for the release steps, post-release smoke
 
 ---
 
+## Running tests
+
+The pytest suite runs in a `tests` compose service against the seeded MySQL. No venv or host Python is needed.
+
+```
+docker compose up -d db
+docker compose --profile test run --rm tests
+docker compose --profile test run --rm tests pytest tests/test_delete_flow.py -v
+```
+
+Tests leave the seed DBs unchanged; destructive tests use throwaway `pytest_<hex>` databases. The same suite runs in the `build-and-smoke` PR check. Two known app bugs are tracked as strict `xfail`: QE-7656 (`/<db>/tmetrics`) and QE-7657 (`/<db>/flaky`) return 500 on a project with no executions.
+
+---
+
 ## How to use in project
 
  - __Step 1:__ Create project in robotframework-historic - [guide](https://bit.ly/38JskhS)
