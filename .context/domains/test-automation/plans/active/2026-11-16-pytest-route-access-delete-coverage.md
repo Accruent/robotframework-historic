@@ -276,7 +276,7 @@ Note that no venv or host Python is needed and that tests leave the seed DBs unc
 
 #### Manual Verification
 - [x] PR checks page: `build-and-smoke` is still the only required check and it blocks the merge when red (PR #166: only `PR Build Check / build-and-smoke` is marked Required; 22d1bcb was red and blocked)
-- [ ] README instructions work as written from the root of a working copy on Windows (PowerShell)
+- [x] README instructions work as written from the root of a working copy on Windows (PowerShell) (64 passed, 2 xfailed)
 
 ---
 
