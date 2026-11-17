@@ -114,13 +114,33 @@ See [docs/RELEASE.md](docs/RELEASE.md) for the release steps, post-release smoke
 
 ## Running tests
 
-The pytest suite runs in a `tests` compose service against the seeded MySQL. No venv or host Python is needed.
+The pytest suite runs in a `tests` compose service against the seeded MySQL. No venv or host Python is needed; you only need Git and Docker with the Compose plugin (`docker compose version` should print a version).
 
-```
-docker compose up -d db
-docker compose --profile test run --rm tests
-docker compose --profile test run --rm tests pytest tests/test_delete_flow.py -v
-```
+Run every command from the repository root, the folder that contains `docker-compose.yml`. Running them anywhere else fails with `no configuration file provided: not found`.
+
+1. Clone the repo and change into it (skip if you already have a clone):
+   ```
+   git clone https://github.com/Accruent/robotframework-historic.git
+   cd robotframework-historic
+   ```
+2. Start the database. On first start MySQL loads the seed data; the tests wait up to 120 s for it:
+   ```
+   docker compose up -d db
+   ```
+3. Run the full suite. The first run builds the `tests` image. Expect a summary like `64 passed, 2 xfailed`:
+   ```
+   docker compose --profile test run --rm tests
+   ```
+4. Optional: run a single file, or pass any other pytest arguments:
+   ```
+   docker compose --profile test run --rm tests pytest tests/test_delete_flow.py -v
+   ```
+5. When finished, stop the stack and delete the database volume:
+   ```
+   docker compose --profile test down -v
+   ```
+
+The repo is mounted into the container, so local code edits are picked up without rebuilding. Rebuild with `docker compose --profile test build tests` only after changing `requirements.txt` or `requirements-test.txt`.
 
 Tests leave the seed DBs unchanged; destructive tests use throwaway `pytest_<hex>` databases. The same suite runs in the `build-and-smoke` PR check. Two known app bugs are tracked as strict `xfail`: QE-7656 (`/<db>/tmetrics`) and QE-7657 (`/<db>/flaky`) return 500 on a project with no executions.
 

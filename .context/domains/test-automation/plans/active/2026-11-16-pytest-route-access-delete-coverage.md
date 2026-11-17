@@ -275,7 +275,7 @@ Note that no venv or host Python is needed and that tests leave the seed DBs unc
 - [x] Negative control on a throwaway branch or commit (with user approval): make one test assert the wrong status → `build-and-smoke` fails and the PR shows merge blocked. Revert. (PR #166: failed and BLOCKED, then reverted)
 
 #### Manual Verification
-- [ ] PR checks page: `build-and-smoke` is still the only required check and it blocks the merge when red
+- [x] PR checks page: `build-and-smoke` is still the only required check and it blocks the merge when red (PR #166: only `PR Build Check / build-and-smoke` is marked Required; 22d1bcb was red and blocked)
 - [ ] README instructions work as written from a clean clone on Windows (PowerShell) with Docker Desktop
 
 ---
