@@ -45,6 +45,23 @@ services:
       FLASKHOST: 0.0.0.0
     networks:
       - rf
+  # tests - run with: docker compose --profile test run --rm tests
+  tests:
+    profiles: ["test"]
+    depends_on:
+      - db
+    build:
+      context: .
+      dockerfile: tests/Dockerfile
+    environment:
+      SQLHOST: db
+      PORT: 3306
+      USERNAME: root
+      PASSWORD: password
+    volumes:
+      - ./:/app
+    networks:
+      - rf
 networks:
   rf:
 volumes:

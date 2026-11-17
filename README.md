@@ -112,6 +112,35 @@ See [docs/RELEASE.md](docs/RELEASE.md) for the release steps, post-release smoke
 
 ---
 
+## Running tests
+
+The pytest suite runs in a `tests` compose service against the seeded MySQL. No venv or host Python is needed; you only need Git and Docker with the Compose plugin (`docker compose version` should print a version).
+
+Run every command from the root of your working copy (the clone or worktree you are developing in), the folder that contains `docker-compose.yml`. Running them anywhere else fails with `no configuration file provided: not found`.
+
+1. Start the database. On first start MySQL loads the seed data; the tests wait up to 120 s for it:
+   ```
+   docker compose up -d db
+   ```
+2. Run the full suite. The first run builds the `tests` image. Expect a summary like `64 passed, 2 xfailed`:
+   ```
+   docker compose --profile test run --rm tests
+   ```
+3. Optional: run a single file, or pass any other pytest arguments:
+   ```
+   docker compose --profile test run --rm tests pytest tests/test_delete_flow.py -v
+   ```
+4. When finished, stop the stack and delete the database volume:
+   ```
+   docker compose --profile test down -v
+   ```
+
+The repo is mounted into the container, so local code edits are picked up without rebuilding. Rebuild with `docker compose --profile test build tests` only after changing `requirements.txt` or `requirements-test.txt`.
+
+Tests leave the seed DBs unchanged; destructive tests use throwaway `pytest_<hex>` databases. The same suite runs in the `build-and-smoke` PR check. Two known app bugs are tracked as strict `xfail`: QE-7656 (`/<db>/tmetrics`) and QE-7657 (`/<db>/flaky`) return 500 on a project with no executions.
+
+---
+
 ## How to use in project
 
  - __Step 1:__ Create project in robotframework-historic - [guide](https://bit.ly/38JskhS)

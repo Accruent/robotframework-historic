@@ -36,6 +36,9 @@ jobs:
           check /rf_full_data/edelete/1 403
           exit $fail
 
+      - name: Run pytest
+        run: docker compose --profile test run --rm tests
+
       - name: Dump logs
         if: failure()
         run: docker compose logs
