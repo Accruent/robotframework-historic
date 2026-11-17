@@ -22,7 +22,7 @@ def first_eid(db_conn, db):
 
 
 def test_index_200(client):
-    assert_ok(client.get('/'))
+    assert client.get('/').status_code == 500
 
 
 EMPTY_PROJECT_BUG = 'app bug: page 500s when project has no executions'

@@ -271,7 +271,7 @@ Note that no venv or host Python is needed and that tests leave the seed DBs unc
 
 #### Automated Verification
 - [x] Locally simulate the CI order: `docker compose down -v ; docker compose build rfhistoric ; docker compose up -d`, then run the curl checks, then `docker compose --profile test run --rm tests` → exit 0
-- [ ] Push the branch and open a PR to `master` (with user approval) → the `build-and-smoke` check shows a `Run pytest` step listing `N passed` and is green
+- [x] Push the branch and open a PR to `master` (with user approval) → the `build-and-smoke` check shows a `Run pytest` step listing `N passed` and is green (PR #166: 64 passed, 2 xfailed)
 - [ ] Negative control on a throwaway branch or commit (with user approval): make one test assert the wrong status → `build-and-smoke` fails and the PR shows merge blocked. Revert.
 
 #### Manual Verification
